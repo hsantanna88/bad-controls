@@ -1,0 +1,120 @@
+---
+title: "Difference-in-Differences with Bad Controls"
+author: "Carolina Caetano, Brantly Callaway, Stroud Payne, Hugo Sant'Anna"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Difference-in-Differences with Bad Controls}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+## The Bad Controls Problem
+
+In difference-in-differences, researchers often want to include time-varying
+covariates in the parallel trends assumption. The problem: if a covariate $X_t$
+is measured **after** treatment, it may itself be affected by treatment.
+Conditioning on it introduces post-treatment selection bias --- a "bad control."
+
+Three things can go wrong:
+
+1. **Including $X_t$ directly**: introduces bias (absorbs indirect effect $D \to X \to Y$)
+2. **Dropping $X_t$ entirely**: may violate parallel trends
+3. **Using only $X_{t-1}$**: works under restrictive conditions
+
+This package provides two estimators that correctly handle bad controls:
+
+- **Imputation**: impute the counterfactual $X_t(0)$ for treated units
+- **Doubly Robust ML**: semiparametric estimator with cross-fitting
+
+## Simulated Example
+
+We simulate a staggered DiD dataset where:
+
+- Treatment directly affects $Y$ (direct ATT = 0.2)
+- Treatment also shifts $X_t$ by $\theta = 0.8$ (bad control!)
+- $X_t$ affects $Y_t$ with coefficient $\beta = 1.0$
+- True total ATT = $0.2 + 1.0 \times 0.8 = 1.0$
+
+```{r simulate}
+library(badcontrols)
+set.seed(20240301)
+
+sim <- simulate_bad_controls(n = 2000, T_max = 4)
+cat("True ATT:", sim$true_att, "\n")
+head(sim$data)
+```
+
+## Visualizing the Problem
+
+Treatment causally shifts $X_t$, creating divergent paths between treated and
+control groups after treatment onset:
+
+```{r plot, message=FALSE}
+library(dplyr)
+library(ggplot2)
+
+x_means <- sim$data %>%
+  mutate(Group = ifelse(G > 0, "Treated", "Never-Treated")) %>%
+  group_by(Group, period) %>%
+  summarize(mean_X = mean(X), .groups = "drop")
+
+ggplot(x_means, aes(x = period, y = mean_X, color = Group)) +
+  geom_line(linewidth = 1.2) +
+  geom_point(size = 3) +
+  geom_vline(xintercept = 2.5, linetype = "dashed", alpha = 0.5) +
+  labs(title = "X diverges after treatment",
+       x = "Period", y = "Mean of X", color = "") +
+  theme_minimal(base_size = 14) +
+  theme(legend.position = "bottom")
+```
+
+## Estimation
+
+### Imputation Approach
+
+Two-step procedure:
+
+1. Among controls, learn $X_t \sim f(X_{t-1}, W, Z)$
+2. For treated, predict counterfactual $X_t(0)$
+3. Run DiD using imputed $X_t(0)$
+
+```{r imputation, eval=FALSE}
+res_imp <- bc_att_gt(
+  yname = "Y", gname = "G", tname = "period", idname = "id",
+  data = sim$data,
+  bad_control_formula = ~X,
+  xformla = ~Z,
+  est_method = "imputation"
+)
+extract_att(res_imp)
+```
+
+### Doubly Robust ML
+
+Semiparametric estimator combining outcome regression with propensity score
+weighting. Uses random forests (`grf`) with K-fold cross-fitting.
+
+```{r drml, eval=FALSE}
+res_ml <- bc_att_gt(
+  yname = "Y", gname = "G", tname = "period", idname = "id",
+  data = sim$data,
+  bad_control_formula = ~X,
+  xformla = ~Z,
+  est_method = "dr_ml"
+)
+extract_att(res_ml)
+```
+
+## References
+
+Caetano, C., Callaway, B., Payne, S., and Sant'Anna, H. (2024).
+"Difference-in-Differences with Bad Controls."

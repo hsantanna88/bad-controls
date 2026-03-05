@@ -1,0 +1,46 @@
+Package: badcontrols
+Title: Difference-in-Differences with Bad Controls
+Version: 0.1.0
+Authors@R: c(
+    person("Carolina", "Caetano", role = "aut",
+           email = "ccaetano@uga.edu"),
+    person("Brantly", "Callaway", role = "aut",
+           email = "brantly.callaway@uga.edu"),
+    person("Stroud", "Payne", role = "aut",
+           email = "stroud.payne@vanderbilt.edu"),
+    person("Hugo", "Sant'Anna", role = c("aut", "cre"),
+           email = "hugo.santanna@uab.edu",
+           comment = c(ORCID = "0000-0003-3568-3600"))
+    )
+Description: Implements methods for difference-in-differences when
+    time-varying covariates are affected by treatment (bad controls).
+    Provides imputation-based and doubly robust machine learning estimators
+    that correctly handle post-treatment covariates. Builds on the panel
+    treatment effects infrastructure in 'pte'. Based on Caetano, Callaway,
+    Payne, and Sant'Anna (2024) "Difference-in-Differences with Bad Controls".
+URL: https://github.com/hsantanna88/bad-controls
+BugReports: https://github.com/hsantanna88/bad-controls/issues
+License: GPL (>= 3)
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.2
+Depends:
+    R (>= 4.1.0)
+Imports:
+    pte,
+    DRDID,
+    BMisc (>= 1.4.7),
+    dplyr,
+    tidyr,
+    stats
+Suggests:
+    grf (>= 2.0.0),
+    fixest,
+    ggplot2,
+    testthat (>= 3.0.0),
+    knitr,
+    rmarkdown
+Remotes:
+    bcallaway11/pte
+VignetteBuilder: knitr
+Config/testthat/edition: 3
