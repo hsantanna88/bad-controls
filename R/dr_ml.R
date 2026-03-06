@@ -8,11 +8,11 @@
 #' @details The estimator uses six nuisance functions estimated via random
 #'  forests (`grf` package):
 #'  \itemize{
-#'    \item mu(X_t, X_{t-1}, Z): outcome regression among controls
-#'    \item nu(X_{t-1}, W, Z): nested regression (integrating out X_t)
-#'    \item e_1(X_{t-1}, Z): coarse propensity score
-#'    \item e_2(X_{t-1}, W, Z): fine propensity score
-#'    \item alpha(X_t, X_{t-1}, Z): change of measure density ratio
+#'    \item mu(X_t, X(t-1), Z): outcome regression among controls
+#'    \item nu(X(t-1), W, Z): nested regression (integrating out X_t)
+#'    \item e_1(X(t-1), Z): coarse propensity score
+#'    \item e_2(X(t-1), W, Z): fine propensity score
+#'    \item alpha(X_t, X(t-1), Z): change of measure density ratio
 #'    \item p: marginal treatment probability
 #'  }
 #'
@@ -25,7 +25,7 @@
 #'   id, D, period, name (pre/post), Y, plus bad control variables
 #' @param xformla one-sided formula for Z (time-invariant covariates)
 #' @param d_covs_formula one-sided formula for X (bad control variables)
-#' @param lagged_outcome_cov logical; if TRUE, include Y_{t-1} as
+#' @param lagged_outcome_cov logical; if TRUE, include Y(t-1) as
 #'   auxiliary variable W
 #' @param n_folds number of cross-fitting folds (default 5)
 #' @param trim_ps propensity score trimming threshold (default 0.01)
@@ -131,7 +131,7 @@ dr_ml_attgt <- function(gt_data,
     eval_idx <- which(fold_ids == k)
     train_control <- train_idx[D[train_idx] == 0]
 
-    # mu: E[DeltaY | X_t, X_{t-1}, Z, D=0]
+    # mu: E[DeltaY | X_t, X(t-1), Z, D=0]
     mu_forest <- grf::regression_forest(
       X = mu_features[train_control, , drop = FALSE],
       Y = DeltaY[train_control],
@@ -140,7 +140,7 @@ dr_ml_attgt <- function(gt_data,
     mu_hat[eval_idx] <- predict(mu_forest,
       newdata = mu_features[eval_idx, , drop = FALSE])$predictions
 
-    # nu: E[mu(X_t, X_{t-1}, Z) | X_{t-1}, W, Z, D=0]
+    # nu: E[mu(X_t, X(t-1), Z) | X(t-1), W, Z, D=0]
     mu_pseudo <- predict(mu_forest,
       newdata = mu_features[train_control, , drop = FALSE])$predictions
 
@@ -152,7 +152,7 @@ dr_ml_attgt <- function(gt_data,
     nu_hat[eval_idx] <- predict(nu_forest,
       newdata = nu_features[eval_idx, , drop = FALSE])$predictions
 
-    # e1: P(D=1 | X_{t-1}, Z)
+    # e1: P(D=1 | X(t-1), Z)
     e1_forest <- grf::probability_forest(
       X = e1_features[train_idx, , drop = FALSE],
       Y = as.factor(D[train_idx]),
@@ -162,7 +162,7 @@ dr_ml_attgt <- function(gt_data,
       newdata = e1_features[eval_idx, , drop = FALSE])$predictions
     e1_hat[eval_idx] <- e1_probs[, 2]
 
-    # e2: P(D=1 | X_{t-1}, W, Z)
+    # e2: P(D=1 | X(t-1), W, Z)
     e2_forest <- grf::probability_forest(
       X = e2_features[train_idx, , drop = FALSE],
       Y = as.factor(D[train_idx]),

@@ -42,7 +42,7 @@
 #'
 #' \strong{Imputation} (\code{est_method = "imputation"}):
 #' \enumerate{
-#'   \item Among controls, learn X_t ~ f(X_{t-1}, W, Z)
+#'   \item Among controls, learn X_t ~ f(X(t-1), W, Z)
 #'   \item For treated, predict counterfactual X_t(0)
 #'   \item Run DiD using imputed X_t(0) instead of observed X_t
 #' }

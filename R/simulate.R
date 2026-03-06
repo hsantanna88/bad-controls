@@ -28,9 +28,9 @@
 #' The true total ATT = \code{direct_att} + \code{x_effect_on_y} *
 #' \code{treatment_effect_on_x}. The DGP satisfies:
 #' \itemize{
-#'   \item Conditional parallel trends given (X_t, X_{t-1}, Z)
+#'   \item Conditional parallel trends given (X_t, X(t-1), Z)
 #'   \item Unconditional parallel trends FAILS (heterogeneous X trends)
-#'   \item Simple Covariate Unconfoundedness: X_t(0) indep D | X_{t-1}, Z
+#'   \item Simple Covariate Unconfoundedness: X_t(0) indep D | X(t-1), Z
 #' }
 #'
 #' @examples
