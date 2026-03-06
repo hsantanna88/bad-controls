@@ -1,0 +1,48 @@
+/* Custom styles for bad-controls guide */
+
+.hero-banner {
+  background-color: #2C3E50;
+  color: #E8E8E8;
+  padding: 2rem;
+  border-radius: 8px;
+  margin-bottom: 2rem;
+  border-left: 6px solid #E05A47;
+}
+
+.hero-banner h2 {
+  color: #E8E8E8;
+  margin-top: 0;
+}
+
+.hero-banner a,
+.hero-banner code a,
+.hero-banner a code {
+  color: #CB6CE6;
+  text-decoration: underline;
+}
+
+.hero-banner a:hover,
+.hero-banner code a:hover,
+.hero-banner a code:hover {
+  color: #E0A0F0;
+}
+
+.method-card {
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 1.2rem;
+  margin-bottom: 1rem;
+}
+
+.method-card.biased {
+  border-left: 4px solid #E05A47;
+}
+
+.method-card.correct {
+  border-left: 4px solid #28a745;
+}
+
+.dag-container {
+  text-align: center;
+  margin: 1.5rem 0;
+}
