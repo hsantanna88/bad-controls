@@ -1,4 +1,4 @@
-# badcontrols
+# badcontrols <img src="inst/figures/hexsticker.png" align="right" height="139" />
 
 <!-- badges: start -->
 [![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)](https://github.com/hsantanna88/bad-controls)
