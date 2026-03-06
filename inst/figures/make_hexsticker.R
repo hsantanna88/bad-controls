@@ -36,7 +36,13 @@ p <- ggplot() +
   # Node labels
   geom_text(data = nodes, aes(x = x, y = y, label = label),
             color = "white", size = 8, fontface = "bold", family = "lato") +
-  coord_fixed(xlim = c(-2, 2), ylim = c(-1.5, 1.3)) +
+  # Version badge
+  annotate("label", x = 0, y = -1.45, label = "v0.1.0",
+           fill = "#E05A47", color = "white", size = 3.5,
+           fontface = "bold", family = "lato",
+           label.padding = unit(0.15, "lines"),
+           label.r = unit(0.15, "lines")) +
+  coord_fixed(xlim = c(-2, 2), ylim = c(-1.8, 1.3)) +
   theme_void() +
   theme(plot.background = element_rect(fill = "transparent", color = NA))
 
