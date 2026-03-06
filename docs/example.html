@@ -1,0 +1,1230 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.8.27">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>Worked Example – Difference-in-Differences with Bad Controls</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="site_libs/quarto-nav/headroom.min.js"></script>
+<script src="site_libs/clipboard/clipboard.min.js"></script>
+<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="site_libs/quarto-search/fuse.min.js"></script>
+<script src="site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="./">
+<link href="./../badcontrols-pkg/inst/figures/hexsticker.png" rel="icon" type="image/png">
+<script src="site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="site_libs/quarto-html/axe/axe-check.js" type="module"></script>
+<script src="site_libs/quarto-html/popper.min.js"></script>
+<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="site_libs/quarto-html/anchor.min.js"></script>
+<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-8b4baf804e461d9b72633f0de59a0cac.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="site_libs/bootstrap/bootstrap-1f2d6daba7bd1a79bea505a54d6176a8.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+<link rel="stylesheet" href="styles.css">
+</head>
+
+<body class="nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a href="./index.html" class="navbar-brand navbar-brand-logo">
+    <img src="./../badcontrols-pkg/inst/figures/hexsticker.png" alt="" class="navbar-logo light-content">
+    <img src="./../badcontrols-pkg/inst/figures/hexsticker.png" alt="" class="navbar-logo dark-content">
+    </a>
+    <a class="navbar-brand" href="./index.html">
+    <span class="navbar-title">Difference-in-Differences with Bad Controls</span>
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll me-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="./index.html"> 
+<span class="menu-text">Home</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="./problem.html"> 
+<span class="menu-text">The Problem</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="./estimation.html"> 
+<span class="menu-text">Estimation</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link active" href="./example.html" aria-current="page"> 
+<span class="menu-text">Example</span></a>
+  </li>  
+</ul>
+            <ul class="navbar-nav navbar-nav-scroll ms-auto">
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/hsantanna88/bad-controls"> <i class="bi bi-github" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="https://hsantanna88.github.io/badcontrols/"> 
+<span class="menu-text">R Package</span></a>
+  </li>  
+</ul>
+          </div> <!-- /navcollapse -->
+            <div class="quarto-navbar-tools">
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#setup" id="toc-setup" class="nav-link active" data-scroll-target="#setup">Setup</a></li>
+  <li><a href="#part-1-simulate-data" id="toc-part-1-simulate-data" class="nav-link" data-scroll-target="#part-1-simulate-data">Part 1: Simulate data</a></li>
+  <li><a href="#part-2-visualize-the-problem" id="toc-part-2-visualize-the-problem" class="nav-link" data-scroll-target="#part-2-visualize-the-problem">Part 2: Visualize the problem</a></li>
+  <li><a href="#the-role-of-w" id="toc-the-role-of-w" class="nav-link" data-scroll-target="#the-role-of-w">The role of W</a></li>
+  <li><a href="#part-3-compare-estimators" id="toc-part-3-compare-estimators" class="nav-link" data-scroll-target="#part-3-compare-estimators">Part 3: Compare estimators</a>
+  <ul class="collapse">
+  <li><a href="#method-0-naive-did-no-covariates" id="toc-method-0-naive-did-no-covariates" class="nav-link" data-scroll-target="#method-0-naive-did-no-covariates">Method 0: Naive DiD (no covariates)</a></li>
+  <li><a href="#method-1-include-x_t-directly-bad-control" id="toc-method-1-include-x_t-directly-bad-control" class="nav-link" data-scroll-target="#method-1-include-x_t-directly-bad-control">Method 1: Include <span class="math inline">\(X_t\)</span> directly (bad control)</a></li>
+  <li><a href="#method-2-pre-treatment-x-only" id="toc-method-2-pre-treatment-x-only" class="nav-link" data-scroll-target="#method-2-pre-treatment-x-only">Method 2: Pre-treatment <span class="math inline">\(X\)</span> only</a></li>
+  <li><a href="#method-3-imputation-our-proposal" id="toc-method-3-imputation-our-proposal" class="nav-link" data-scroll-target="#method-3-imputation-our-proposal">Method 3: Imputation (our proposal)</a></li>
+  <li><a href="#method-4-doubly-robust-ml-our-proposal" id="toc-method-4-doubly-robust-ml-our-proposal" class="nav-link" data-scroll-target="#method-4-doubly-robust-ml-our-proposal">Method 4: Doubly Robust ML (our proposal)</a></li>
+  </ul></li>
+  <li><a href="#part-4-comparison-table" id="toc-part-4-comparison-table" class="nav-link" data-scroll-target="#part-4-comparison-table">Part 4: Comparison table</a></li>
+  <li><a href="#part-5-summary" id="toc-part-5-summary" class="nav-link" data-scroll-target="#part-5-summary">Part 5: Summary</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<div class="quarto-title-block"><div><h1 class="title">Worked Example</h1><button type="button" class="btn code-tools-button" id="quarto-code-tools-source"><i class="bi"></i> Code</button></div></div>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p>This walkthrough uses simulated data where the true ATT is known, so you can verify that the estimators recover the correct answer.</p>
+<section id="setup" class="level2">
+<h2 class="anchored" data-anchor-id="setup">Setup</h2>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(badcontrols)</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(pte)</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggplot2)</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(dplyr)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">20240301</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="part-1-simulate-data" class="level2">
+<h2 class="anchored" data-anchor-id="part-1-simulate-data">Part 1: Simulate data</h2>
+<p>We simulate a staggered DiD dataset where:</p>
+<ul>
+<li>Treatment directly affects <span class="math inline">\(Y\)</span> (direct ATT = 0.2)</li>
+<li>Treatment also shifts <span class="math inline">\(X_t\)</span> by <span class="math inline">\(\theta = 0.8\)</span> (bad control!)</li>
+<li><span class="math inline">\(X_t\)</span> affects <span class="math inline">\(Y_t\)</span> with coefficient <span class="math inline">\(\beta = 1.0\)</span></li>
+<li><strong>True total ATT</strong> = <span class="math inline">\(0.2 + 1.0 \times 0.8 = 1.0\)</span></li>
+</ul>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>sim <span class="ot">&lt;-</span> <span class="fu">simulate_bad_controls</span>(</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">n =</span> <span class="dv">2000</span>,</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">T_max =</span> <span class="dv">4</span>,</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">direct_att =</span> <span class="fl">0.2</span>,</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">x_effect_on_y =</span> <span class="fl">1.0</span>,</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">treatment_effect_on_x =</span> <span class="fl">0.8</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"True ATT:"</span>, sim<span class="sc">$</span>true_att, <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>True ATT: 1 </code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Periods:"</span>, <span class="fu">sort</span>(<span class="fu">unique</span>(sim<span class="sc">$</span>data<span class="sc">$</span>period)), <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Periods: 1 2 3 4 </code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Treatment groups:"</span>, <span class="fu">sort</span>(<span class="fu">unique</span>(sim<span class="sc">$</span>data<span class="sc">$</span>G)), <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Treatment groups: 0 3 4 </code></pre>
+</div>
+</div>
+<p>The data has 8000 rows (panel of 2000 units over 4 periods).</p>
+</section>
+<section id="part-2-visualize-the-problem" class="level2">
+<h2 class="anchored" data-anchor-id="part-2-visualize-the-problem">Part 2: Visualize the problem</h2>
+<p>Treatment causally shifts <span class="math inline">\(X_t\)</span>, creating divergent paths between treated and control groups after treatment onset:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>x_means <span class="ot">&lt;-</span> sim<span class="sc">$</span>data <span class="sc">|&gt;</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">Group =</span> <span class="fu">ifelse</span>(G <span class="sc">&gt;</span> <span class="dv">0</span>, <span class="st">"Treated"</span>, <span class="st">"Never-Treated"</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(Group, period) <span class="sc">|&gt;</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarize</span>(<span class="at">mean_X =</span> <span class="fu">mean</span>(X), <span class="at">.groups =</span> <span class="st">"drop"</span>)</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(x_means, <span class="fu">aes</span>(<span class="at">x =</span> period, <span class="at">y =</span> mean_X, <span class="at">color =</span> Group)) <span class="sc">+</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="at">linewidth =</span> <span class="fl">1.2</span>) <span class="sc">+</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="at">size =</span> <span class="dv">3</span>) <span class="sc">+</span></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="fl">2.5</span>, <span class="at">linetype =</span> <span class="st">"dashed"</span>, <span class="at">alpha =</span> <span class="fl">0.5</span>) <span class="sc">+</span></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">annotate</span>(<span class="st">"text"</span>, <span class="at">x =</span> <span class="fl">2.7</span>, <span class="at">y =</span> <span class="fu">max</span>(x_means<span class="sc">$</span>mean_X),</span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>           <span class="at">label =</span> <span class="st">"Treatment</span><span class="sc">\n</span><span class="st">starts"</span>, <span class="at">hjust =</span> <span class="dv">0</span>, <span class="at">size =</span> <span class="fl">3.5</span>) <span class="sc">+</span></span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">title =</span> <span class="st">"The Bad Control: X diverges after treatment"</span>,</span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">subtitle =</span> <span class="st">"Treatment causally shifts X, making post-treatment X endogenous"</span>,</span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="st">"Period"</span>, <span class="at">y =</span> <span class="st">"Mean of X"</span>, <span class="at">color =</span> <span class="st">""</span></span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>(<span class="at">base_size =</span> <span class="dv">14</span>) <span class="sc">+</span></span>
+<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">legend.position =</span> <span class="st">"bottom"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="example_files/figure-html/unnamed-chunk-3-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>After treatment onset (period 3), the treated group’s <span class="math inline">\(X\)</span> jumps up. This is the treatment effect on <span class="math inline">\(X\)</span> — the source of the bad control problem. If you condition on post-treatment <span class="math inline">\(X\)</span>, you absorb part of the treatment effect.</p>
+</section>
+<section id="the-role-of-w" class="level2">
+<h2 class="anchored" data-anchor-id="the-role-of-w">The role of W</h2>
+<p>In the simulation, <span class="math inline">\(W\)</span> is a pre-treatment variable that confounds both treatment <span class="math inline">\(D\)</span> and the covariate <span class="math inline">\(X_t\)</span>. Looking at the <a href="./problem.html">DAG</a>: <span class="math inline">\(D \leftarrow W \rightarrow X_t(0)\)</span>. Without conditioning on <span class="math inline">\(W\)</span>, the imputation model would inherit this confounding — even after controlling for <span class="math inline">\(X_{t-1}\)</span> and <span class="math inline">\(Z\)</span>.</p>
+<p>In <code>bc_att_gt()</code>, we include <span class="math inline">\(W\)</span> via the <code>xformla</code> argument. The imputation model estimated among controls is:</p>
+<p><span class="math display">\[
+X_t = \hat{f}(X_{t-1}, W, Z)
+\]</span></p>
+<p>and the predicted <span class="math inline">\(\hat{X}_t(0)\)</span> for treated units uses their own pre-treatment values of <span class="math inline">\(X_{t-1}\)</span>, <span class="math inline">\(W\)</span>, and <span class="math inline">\(Z\)</span>.</p>
+<p>See the <a href="./estimation.html">Estimation</a> page for more on when <span class="math inline">\(W\)</span> is needed and what can serve as <span class="math inline">\(W\)</span>.</p>
+</section>
+<section id="part-3-compare-estimators" class="level2">
+<h2 class="anchored" data-anchor-id="part-3-compare-estimators">Part 3: Compare estimators</h2>
+<p>We compare five approaches. Only our two proposed methods (imputation and DR/ML) should recover the true ATT = 1.0.</p>
+<section id="method-0-naive-did-no-covariates" class="level3">
+<h3 class="anchored" data-anchor-id="method-0-naive-did-no-covariates">Method 0: Naive DiD (no covariates)</h3>
+<p>Ignores <span class="math inline">\(X\)</span> entirely. Biased if parallel trends requires conditioning on <span class="math inline">\(X\)</span>.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>res_naive <span class="ot">&lt;-</span> <span class="fu">pte_default</span>(</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">yname =</span> <span class="st">"Y"</span>, <span class="at">gname =</span> <span class="st">"G"</span>, <span class="at">tname =</span> <span class="st">"period"</span>, <span class="at">idname =</span> <span class="st">"id"</span>,</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> sim<span class="sc">$</span>data, <span class="at">d_outcome =</span> <span class="cn">TRUE</span>, <span class="at">est_method =</span> <span class="st">"reg"</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>att0 <span class="ot">&lt;-</span> <span class="fu">extract_att</span>(res_naive)</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"ATT:"</span>, <span class="fu">round</span>(att0<span class="sc">$</span>att, <span class="dv">4</span>), <span class="st">" (SE:"</span>, <span class="fu">round</span>(att0<span class="sc">$</span>se, <span class="dv">4</span>), <span class="st">")</span><span class="sc">\n</span><span class="st">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>ATT: 1.355  (SE: 0.0265 )</code></pre>
+</div>
+</div>
+</section>
+<section id="method-1-include-x_t-directly-bad-control" class="level3">
+<h3 class="anchored" data-anchor-id="method-1-include-x_t-directly-bad-control">Method 1: Include <span class="math inline">\(X_t\)</span> directly (bad control)</h3>
+<p>Conditions on post-treatment <span class="math inline">\(X_t\)</span>. Classic bad control bias.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>res_bad <span class="ot">&lt;-</span> <span class="fu">pte_default</span>(</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">yname =</span> <span class="st">"Y"</span>, <span class="at">gname =</span> <span class="st">"G"</span>, <span class="at">tname =</span> <span class="st">"period"</span>, <span class="at">idname =</span> <span class="st">"id"</span>,</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> sim<span class="sc">$</span>data, <span class="at">d_outcome =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">d_covs_formula =</span> <span class="sc">~</span>X, <span class="at">est_method =</span> <span class="st">"reg"</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>att1 <span class="ot">&lt;-</span> <span class="fu">extract_att</span>(res_bad)</span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"ATT:"</span>, <span class="fu">round</span>(att1<span class="sc">$</span>att, <span class="dv">4</span>), <span class="st">" (SE:"</span>, <span class="fu">round</span>(att1<span class="sc">$</span>se, <span class="dv">4</span>), <span class="st">")</span><span class="sc">\n</span><span class="st">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>ATT: 0.3418  (SE: 0.0291 )</code></pre>
+</div>
+</div>
+</section>
+<section id="method-2-pre-treatment-x-only" class="level3">
+<h3 class="anchored" data-anchor-id="method-2-pre-treatment-x-only">Method 2: Pre-treatment <span class="math inline">\(X\)</span> only</h3>
+<p>Uses time-invariant covariates <span class="math inline">\(Z\)</span>. Works under restrictive conditions.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>res_pretreat <span class="ot">&lt;-</span> <span class="fu">pte_default</span>(</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">yname =</span> <span class="st">"Y"</span>, <span class="at">gname =</span> <span class="st">"G"</span>, <span class="at">tname =</span> <span class="st">"period"</span>, <span class="at">idname =</span> <span class="st">"id"</span>,</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> sim<span class="sc">$</span>data, <span class="at">d_outcome =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">xformla =</span> <span class="sc">~</span>Z <span class="sc">+</span> W, <span class="at">est_method =</span> <span class="st">"reg"</span></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>att2 <span class="ot">&lt;-</span> <span class="fu">extract_att</span>(res_pretreat)</span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"ATT:"</span>, <span class="fu">round</span>(att2<span class="sc">$</span>att, <span class="dv">4</span>), <span class="st">" (SE:"</span>, <span class="fu">round</span>(att2<span class="sc">$</span>se, <span class="dv">4</span>), <span class="st">")</span><span class="sc">\n</span><span class="st">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>ATT: 1.0278  (SE: 0.0243 )</code></pre>
+</div>
+</div>
+</section>
+<section id="method-3-imputation-our-proposal" class="level3">
+<h3 class="anchored" data-anchor-id="method-3-imputation-our-proposal">Method 3: Imputation (our proposal)</h3>
+<p>Imputes the counterfactual <span class="math inline">\(X_t(0)\)</span> for treated units, then runs DiD.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>res_imp <span class="ot">&lt;-</span> <span class="fu">bc_att_gt</span>(</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">yname =</span> <span class="st">"Y"</span>, <span class="at">gname =</span> <span class="st">"G"</span>, <span class="at">tname =</span> <span class="st">"period"</span>, <span class="at">idname =</span> <span class="st">"id"</span>,</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> sim<span class="sc">$</span>data,</span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">bad_control_formula =</span> <span class="sc">~</span>X,</span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">xformla =</span> <span class="sc">~</span>Z <span class="sc">+</span> W,</span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">est_method =</span> <span class="st">"imputation"</span>,</span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">lagged_outcome_cov =</span> <span class="cn">FALSE</span></span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a>att3 <span class="ot">&lt;-</span> <span class="fu">extract_att</span>(res_imp)</span>
+<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"ATT:"</span>, <span class="fu">round</span>(att3<span class="sc">$</span>att, <span class="dv">4</span>), <span class="st">" (SE:"</span>, <span class="fu">round</span>(att3<span class="sc">$</span>se, <span class="dv">4</span>), <span class="st">")</span><span class="sc">\n</span><span class="st">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>ATT: 1.0133  (SE: 0.0046 )</code></pre>
+</div>
+</div>
+</section>
+<section id="method-4-doubly-robust-ml-our-proposal" class="level3">
+<h3 class="anchored" data-anchor-id="method-4-doubly-robust-ml-our-proposal">Method 4: Doubly Robust ML (our proposal)</h3>
+<p>Combines the imputation approach with an AIPW correction using random forest propensity scores (cross-fitted via <a href="https://grf-labs.github.io/grf/"><code>grf</code></a>). Consistent if <strong>either</strong> the outcome model <strong>or</strong> the propensity score is correctly specified.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>res_ml <span class="ot">&lt;-</span> <span class="fu">bc_att_gt</span>(</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">yname =</span> <span class="st">"Y"</span>, <span class="at">gname =</span> <span class="st">"G"</span>, <span class="at">tname =</span> <span class="st">"period"</span>, <span class="at">idname =</span> <span class="st">"id"</span>,</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> sim<span class="sc">$</span>data,</span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">bad_control_formula =</span> <span class="sc">~</span>X,</span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">xformla =</span> <span class="sc">~</span>Z <span class="sc">+</span> W,</span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">est_method =</span> <span class="st">"dr_ml"</span>,</span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">lagged_outcome_cov =</span> <span class="cn">FALSE</span></span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a>att4 <span class="ot">&lt;-</span> <span class="fu">extract_att</span>(res_ml)</span>
+<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"ATT:"</span>, <span class="fu">round</span>(att4<span class="sc">$</span>att, <span class="dv">4</span>), <span class="st">" (SE:"</span>, <span class="fu">round</span>(att4<span class="sc">$</span>se, <span class="dv">4</span>), <span class="st">")</span><span class="sc">\n</span><span class="st">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>ATT: 1.0308  (SE: 0.0287 )</code></pre>
+</div>
+</div>
+</section>
+</section>
+<section id="part-4-comparison-table" class="level2">
+<h2 class="anchored" data-anchor-id="part-4-comparison-table">Part 4: Comparison table</h2>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>results <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">Method =</span> <span class="fu">c</span>(</span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>    <span class="st">"Naive DiD (no covariates)"</span>,</span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>    <span class="st">"Include X_t (bad control)"</span>,</span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>    <span class="st">"Pre-treatment X only"</span>,</span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>    <span class="st">"Imputation (proposed)"</span>,</span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>    <span class="st">"DR/ML (proposed)"</span></span>
+<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a>  ),</span>
+<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">ATT =</span> <span class="fu">c</span>(att0<span class="sc">$</span>att, att1<span class="sc">$</span>att, att2<span class="sc">$</span>att, att3<span class="sc">$</span>att, att4<span class="sc">$</span>att),</span>
+<span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">SE =</span> <span class="fu">c</span>(att0<span class="sc">$</span>se, att1<span class="sc">$</span>se, att2<span class="sc">$</span>se, att3<span class="sc">$</span>se, att4<span class="sc">$</span>se)</span>
+<span id="cb19-11"><a href="#cb19-11" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb19-12"><a href="#cb19-12" aria-hidden="true" tabindex="-1"></a>results<span class="sc">$</span>Bias <span class="ot">&lt;-</span> results<span class="sc">$</span>ATT <span class="sc">-</span> sim<span class="sc">$</span>true_att</span>
+<span id="cb19-13"><a href="#cb19-13" aria-hidden="true" tabindex="-1"></a>results<span class="sc">$</span>CI_lower <span class="ot">&lt;-</span> results<span class="sc">$</span>ATT <span class="sc">-</span> <span class="fl">1.96</span> <span class="sc">*</span> results<span class="sc">$</span>SE</span>
+<span id="cb19-14"><a href="#cb19-14" aria-hidden="true" tabindex="-1"></a>results<span class="sc">$</span>CI_upper <span class="ot">&lt;-</span> results<span class="sc">$</span>ATT <span class="sc">+</span> <span class="fl">1.96</span> <span class="sc">*</span> results<span class="sc">$</span>SE</span>
+<span id="cb19-15"><a href="#cb19-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-16"><a href="#cb19-16" aria-hidden="true" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(</span>
+<span id="cb19-17"><a href="#cb19-17" aria-hidden="true" tabindex="-1"></a>  results,</span>
+<span id="cb19-18"><a href="#cb19-18" aria-hidden="true" tabindex="-1"></a>  <span class="at">digits =</span> <span class="dv">4</span>,</span>
+<span id="cb19-19"><a href="#cb19-19" aria-hidden="true" tabindex="-1"></a>  <span class="at">col.names =</span> <span class="fu">c</span>(<span class="st">"Method"</span>, <span class="st">"ATT"</span>, <span class="st">"SE"</span>, <span class="st">"Bias"</span>, <span class="st">"CI Lower"</span>, <span class="st">"CI Upper"</span>),</span>
+<span id="cb19-20"><a href="#cb19-20" aria-hidden="true" tabindex="-1"></a>  <span class="at">caption =</span> <span class="fu">paste0</span>(<span class="st">"Comparison of estimators (True ATT = "</span>, sim<span class="sc">$</span>true_att, <span class="st">")"</span>)</span>
+<span id="cb19-21"><a href="#cb19-21" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<table class="caption-top table table-sm table-striped small">
+<caption>Comparison of estimators (True ATT = 1)</caption>
+<colgroup>
+<col style="width: 39%">
+<col style="width: 10%">
+<col style="width: 10%">
+<col style="width: 12%">
+<col style="width: 13%">
+<col style="width: 13%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Method</th>
+<th style="text-align: right;">ATT</th>
+<th style="text-align: right;">SE</th>
+<th style="text-align: right;">Bias</th>
+<th style="text-align: right;">CI Lower</th>
+<th style="text-align: right;">CI Upper</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Naive DiD (no covariates)</td>
+<td style="text-align: right;">1.3550</td>
+<td style="text-align: right;">0.0265</td>
+<td style="text-align: right;">0.3550</td>
+<td style="text-align: right;">1.3030</td>
+<td style="text-align: right;">1.4070</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Include X_t (bad control)</td>
+<td style="text-align: right;">0.3418</td>
+<td style="text-align: right;">0.0291</td>
+<td style="text-align: right;">-0.6582</td>
+<td style="text-align: right;">0.2847</td>
+<td style="text-align: right;">0.3988</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Pre-treatment X only</td>
+<td style="text-align: right;">1.0278</td>
+<td style="text-align: right;">0.0243</td>
+<td style="text-align: right;">0.0278</td>
+<td style="text-align: right;">0.9801</td>
+<td style="text-align: right;">1.0755</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Imputation (proposed)</td>
+<td style="text-align: right;">1.0133</td>
+<td style="text-align: right;">0.0046</td>
+<td style="text-align: right;">0.0133</td>
+<td style="text-align: right;">1.0044</td>
+<td style="text-align: right;">1.0223</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">DR/ML (proposed)</td>
+<td style="text-align: right;">1.0308</td>
+<td style="text-align: right;">0.0287</td>
+<td style="text-align: right;">0.0308</td>
+<td style="text-align: right;">0.9744</td>
+<td style="text-align: right;">1.0871</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<p>The naive DiD and bad control approaches are biased. The pre-treatment <span class="math inline">\(X\)</span> approach may or may not work depending on the DGP. Our imputation and DR/ML methods recover the true ATT.</p>
+</section>
+<section id="part-5-summary" class="level2">
+<h2 class="anchored" data-anchor-id="part-5-summary">Part 5: Summary</h2>
+<div class="callout callout-style-default callout-tip callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Tip</span>Key takeaways
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<ol type="1">
+<li><strong>Including post-treatment <span class="math inline">\(X_t\)</span> directly</strong>: biased (bad control)</li>
+<li><strong>Dropping <span class="math inline">\(X_t\)</span> entirely</strong>: may violate parallel trends</li>
+<li><strong>Using pre-treatment <span class="math inline">\(X_{t-1}\)</span> only</strong>: works under restrictive conditions</li>
+<li><strong>Imputation</strong>: impute <span class="math inline">\(X_t(0)\)</span> for treated, then DiD — our method</li>
+<li><strong>DR/ML</strong>: imputation + AIPW with random forest propensity scores — our method</li>
+</ol>
+<p>Methods 4 and 5 require <strong>Covariate Unconfoundedness</strong>: <span class="math inline">\(X_t(0) \perp\!\!\!\perp D \mid X_{t-1}, W, Z\)</span></p>
+</div>
+</div>
+<p>For the full theoretical treatment, see <a href="https://arxiv.org/abs/2405.10557">Caetano, Callaway, Payne, and Sant’Anna (2024)</a>.</p>
+
+
+<!-- -->
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+    const viewSource = window.document.getElementById('quarto-view-source') ||
+                       window.document.getElementById('quarto-code-tools-source');
+    if (viewSource) {
+      const sourceUrl = viewSource.getAttribute("data-quarto-source-url");
+      viewSource.addEventListener("click", function(e) {
+        if (sourceUrl) {
+          // rstudio viewer pane
+          if (/\bcapabilities=\b/.test(window.location)) {
+            window.open(sourceUrl);
+          } else {
+            window.location.href = sourceUrl;
+          }
+        } else {
+          const modal = new bootstrap.Modal(document.getElementById('quarto-embedded-source-code-modal'));
+          modal.show();
+        }
+        return false;
+      });
+    }
+    function toggleCodeHandler(show) {
+      return function(e) {
+        const detailsSrc = window.document.querySelectorAll(".cell > details > .sourceCode");
+        for (let i=0; i<detailsSrc.length; i++) {
+          const details = detailsSrc[i].parentElement;
+          if (show) {
+            details.open = true;
+          } else {
+            details.removeAttribute("open");
+          }
+        }
+        const cellCodeDivs = window.document.querySelectorAll(".cell > .sourceCode");
+        const fromCls = show ? "hidden" : "unhidden";
+        const toCls = show ? "unhidden" : "hidden";
+        for (let i=0; i<cellCodeDivs.length; i++) {
+          const codeDiv = cellCodeDivs[i];
+          if (codeDiv.classList.contains(fromCls)) {
+            codeDiv.classList.remove(fromCls);
+            codeDiv.classList.add(toCls);
+          } 
+        }
+        return false;
+      }
+    }
+    const hideAllCode = window.document.getElementById("quarto-hide-all-code");
+    if (hideAllCode) {
+      hideAllCode.addEventListener("click", toggleCodeHandler(false));
+    }
+    const showAllCode = window.document.getElementById("quarto-show-all-code");
+    if (showAllCode) {
+      showAllCode.addEventListener("click", toggleCodeHandler(true));
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script><div class="modal fade" id="quarto-embedded-source-code-modal" tabindex="-1" aria-labelledby="quarto-embedded-source-code-modal-label" aria-hidden="true"><div class="modal-dialog modal-dialog-scrollable"><div class="modal-content"><div class="modal-header"><h5 class="modal-title" id="quarto-embedded-source-code-modal-label">Source Code</h5><button class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="">
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb20" data-shortcodes="false"><pre class="sourceCode markdown code-with-copy"><code class="sourceCode markdown"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a><span class="an">title:</span><span class="co"> "Worked Example"</span></span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a><span class="an">execute:</span></span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a><span class="co">  eval: true</span></span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a><span class="co">  warning: false</span></span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a>This walkthrough uses simulated data where the true ATT is known, so you can verify that the estimators recover the correct answer.</span>
+<span id="cb20-9"><a href="#cb20-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-10"><a href="#cb20-10" aria-hidden="true" tabindex="-1"></a><span class="fu">## Setup</span></span>
+<span id="cb20-11"><a href="#cb20-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-14"><a href="#cb20-14" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb20-15"><a href="#cb20-15" aria-hidden="true" tabindex="-1"></a><span class="co">#| eval: true</span></span>
+<span id="cb20-16"><a href="#cb20-16" aria-hidden="true" tabindex="-1"></a><span class="co">#| message: false</span></span>
+<span id="cb20-17"><a href="#cb20-17" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(badcontrols)</span>
+<span id="cb20-18"><a href="#cb20-18" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(pte)</span>
+<span id="cb20-19"><a href="#cb20-19" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggplot2)</span>
+<span id="cb20-20"><a href="#cb20-20" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(dplyr)</span>
+<span id="cb20-21"><a href="#cb20-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-22"><a href="#cb20-22" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">20240301</span>)</span>
+<span id="cb20-23"><a href="#cb20-23" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb20-24"><a href="#cb20-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-25"><a href="#cb20-25" aria-hidden="true" tabindex="-1"></a><span class="fu">## Part 1: Simulate data</span></span>
+<span id="cb20-26"><a href="#cb20-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-27"><a href="#cb20-27" aria-hidden="true" tabindex="-1"></a>We simulate a staggered DiD dataset where:</span>
+<span id="cb20-28"><a href="#cb20-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-29"><a href="#cb20-29" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>Treatment directly affects $Y$ (direct ATT = 0.2)</span>
+<span id="cb20-30"><a href="#cb20-30" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>Treatment also shifts $X_t$ by $\theta = 0.8$ (bad control!)</span>
+<span id="cb20-31"><a href="#cb20-31" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>$X_t$ affects $Y_t$ with coefficient $\beta = 1.0$</span>
+<span id="cb20-32"><a href="#cb20-32" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**True total ATT** = $0.2 + 1.0 \times 0.8 = 1.0$</span>
+<span id="cb20-33"><a href="#cb20-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-36"><a href="#cb20-36" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb20-37"><a href="#cb20-37" aria-hidden="true" tabindex="-1"></a><span class="co">#| eval: true</span></span>
+<span id="cb20-38"><a href="#cb20-38" aria-hidden="true" tabindex="-1"></a>sim <span class="ot">&lt;-</span> <span class="fu">simulate_bad_controls</span>(</span>
+<span id="cb20-39"><a href="#cb20-39" aria-hidden="true" tabindex="-1"></a>  <span class="at">n =</span> <span class="dv">2000</span>,</span>
+<span id="cb20-40"><a href="#cb20-40" aria-hidden="true" tabindex="-1"></a>  <span class="at">T_max =</span> <span class="dv">4</span>,</span>
+<span id="cb20-41"><a href="#cb20-41" aria-hidden="true" tabindex="-1"></a>  <span class="at">direct_att =</span> <span class="fl">0.2</span>,</span>
+<span id="cb20-42"><a href="#cb20-42" aria-hidden="true" tabindex="-1"></a>  <span class="at">x_effect_on_y =</span> <span class="fl">1.0</span>,</span>
+<span id="cb20-43"><a href="#cb20-43" aria-hidden="true" tabindex="-1"></a>  <span class="at">treatment_effect_on_x =</span> <span class="fl">0.8</span></span>
+<span id="cb20-44"><a href="#cb20-44" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb20-45"><a href="#cb20-45" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-46"><a href="#cb20-46" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"True ATT:"</span>, sim<span class="sc">$</span>true_att, <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span>
+<span id="cb20-47"><a href="#cb20-47" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Periods:"</span>, <span class="fu">sort</span>(<span class="fu">unique</span>(sim<span class="sc">$</span>data<span class="sc">$</span>period)), <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span>
+<span id="cb20-48"><a href="#cb20-48" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Treatment groups:"</span>, <span class="fu">sort</span>(<span class="fu">unique</span>(sim<span class="sc">$</span>data<span class="sc">$</span>G)), <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span>
+<span id="cb20-49"><a href="#cb20-49" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb20-50"><a href="#cb20-50" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-51"><a href="#cb20-51" aria-hidden="true" tabindex="-1"></a>The data has <span class="in">`r nrow(sim$data)`</span> rows (panel of <span class="in">`r length(unique(sim$data$id))`</span> units over <span class="in">`r length(unique(sim$data$period))`</span> periods).</span>
+<span id="cb20-52"><a href="#cb20-52" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-53"><a href="#cb20-53" aria-hidden="true" tabindex="-1"></a><span class="fu">## Part 2: Visualize the problem</span></span>
+<span id="cb20-54"><a href="#cb20-54" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-55"><a href="#cb20-55" aria-hidden="true" tabindex="-1"></a>Treatment causally shifts $X_t$, creating divergent paths between treated and control groups after treatment onset:</span>
+<span id="cb20-56"><a href="#cb20-56" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-59"><a href="#cb20-59" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb20-60"><a href="#cb20-60" aria-hidden="true" tabindex="-1"></a><span class="co">#| eval: true</span></span>
+<span id="cb20-61"><a href="#cb20-61" aria-hidden="true" tabindex="-1"></a><span class="co">#| fig-width: 7</span></span>
+<span id="cb20-62"><a href="#cb20-62" aria-hidden="true" tabindex="-1"></a><span class="co">#| fig-height: 5</span></span>
+<span id="cb20-63"><a href="#cb20-63" aria-hidden="true" tabindex="-1"></a>x_means <span class="ot">&lt;-</span> sim<span class="sc">$</span>data <span class="sc">|&gt;</span></span>
+<span id="cb20-64"><a href="#cb20-64" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">Group =</span> <span class="fu">ifelse</span>(G <span class="sc">&gt;</span> <span class="dv">0</span>, <span class="st">"Treated"</span>, <span class="st">"Never-Treated"</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb20-65"><a href="#cb20-65" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(Group, period) <span class="sc">|&gt;</span></span>
+<span id="cb20-66"><a href="#cb20-66" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarize</span>(<span class="at">mean_X =</span> <span class="fu">mean</span>(X), <span class="at">.groups =</span> <span class="st">"drop"</span>)</span>
+<span id="cb20-67"><a href="#cb20-67" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-68"><a href="#cb20-68" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(x_means, <span class="fu">aes</span>(<span class="at">x =</span> period, <span class="at">y =</span> mean_X, <span class="at">color =</span> Group)) <span class="sc">+</span></span>
+<span id="cb20-69"><a href="#cb20-69" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="at">linewidth =</span> <span class="fl">1.2</span>) <span class="sc">+</span></span>
+<span id="cb20-70"><a href="#cb20-70" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="at">size =</span> <span class="dv">3</span>) <span class="sc">+</span></span>
+<span id="cb20-71"><a href="#cb20-71" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="fl">2.5</span>, <span class="at">linetype =</span> <span class="st">"dashed"</span>, <span class="at">alpha =</span> <span class="fl">0.5</span>) <span class="sc">+</span></span>
+<span id="cb20-72"><a href="#cb20-72" aria-hidden="true" tabindex="-1"></a>  <span class="fu">annotate</span>(<span class="st">"text"</span>, <span class="at">x =</span> <span class="fl">2.7</span>, <span class="at">y =</span> <span class="fu">max</span>(x_means<span class="sc">$</span>mean_X),</span>
+<span id="cb20-73"><a href="#cb20-73" aria-hidden="true" tabindex="-1"></a>           <span class="at">label =</span> <span class="st">"Treatment</span><span class="sc">\n</span><span class="st">starts"</span>, <span class="at">hjust =</span> <span class="dv">0</span>, <span class="at">size =</span> <span class="fl">3.5</span>) <span class="sc">+</span></span>
+<span id="cb20-74"><a href="#cb20-74" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
+<span id="cb20-75"><a href="#cb20-75" aria-hidden="true" tabindex="-1"></a>    <span class="at">title =</span> <span class="st">"The Bad Control: X diverges after treatment"</span>,</span>
+<span id="cb20-76"><a href="#cb20-76" aria-hidden="true" tabindex="-1"></a>    <span class="at">subtitle =</span> <span class="st">"Treatment causally shifts X, making post-treatment X endogenous"</span>,</span>
+<span id="cb20-77"><a href="#cb20-77" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="st">"Period"</span>, <span class="at">y =</span> <span class="st">"Mean of X"</span>, <span class="at">color =</span> <span class="st">""</span></span>
+<span id="cb20-78"><a href="#cb20-78" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
+<span id="cb20-79"><a href="#cb20-79" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>(<span class="at">base_size =</span> <span class="dv">14</span>) <span class="sc">+</span></span>
+<span id="cb20-80"><a href="#cb20-80" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">legend.position =</span> <span class="st">"bottom"</span>)</span>
+<span id="cb20-81"><a href="#cb20-81" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb20-82"><a href="#cb20-82" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-83"><a href="#cb20-83" aria-hidden="true" tabindex="-1"></a>After treatment onset (period 3), the treated group's $X$ jumps up. This is the treatment effect on $X$ --- the source of the bad control problem. If you condition on post-treatment $X$, you absorb part of the treatment effect.</span>
+<span id="cb20-84"><a href="#cb20-84" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-85"><a href="#cb20-85" aria-hidden="true" tabindex="-1"></a><span class="fu">## The role of W</span></span>
+<span id="cb20-86"><a href="#cb20-86" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-87"><a href="#cb20-87" aria-hidden="true" tabindex="-1"></a>In the simulation, $W$ is a pre-treatment variable that confounds both treatment $D$ and the covariate $X_t$. Looking at the <span class="co">[</span><span class="ot">DAG</span><span class="co">](problem.qmd)</span>: $D \leftarrow W \rightarrow X_t(0)$. Without conditioning on $W$, the imputation model would inherit this confounding --- even after controlling for $X_{t-1}$ and $Z$.</span>
+<span id="cb20-88"><a href="#cb20-88" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-89"><a href="#cb20-89" aria-hidden="true" tabindex="-1"></a>In <span class="in">`bc_att_gt()`</span>, we include $W$ via the <span class="in">`xformla`</span> argument. The imputation model estimated among controls is:</span>
+<span id="cb20-90"><a href="#cb20-90" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-91"><a href="#cb20-91" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb20-92"><a href="#cb20-92" aria-hidden="true" tabindex="-1"></a>X_t = \hat{f}(X_{t-1}, W, Z)</span>
+<span id="cb20-93"><a href="#cb20-93" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb20-94"><a href="#cb20-94" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-95"><a href="#cb20-95" aria-hidden="true" tabindex="-1"></a>and the predicted $\hat{X}_t(0)$ for treated units uses their own pre-treatment values of $X_{t-1}$, $W$, and $Z$.</span>
+<span id="cb20-96"><a href="#cb20-96" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-97"><a href="#cb20-97" aria-hidden="true" tabindex="-1"></a>See the <span class="co">[</span><span class="ot">Estimation</span><span class="co">](estimation.qmd)</span> page for more on when $W$ is needed and what can serve as $W$.</span>
+<span id="cb20-98"><a href="#cb20-98" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-99"><a href="#cb20-99" aria-hidden="true" tabindex="-1"></a><span class="fu">## Part 3: Compare estimators</span></span>
+<span id="cb20-100"><a href="#cb20-100" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-101"><a href="#cb20-101" aria-hidden="true" tabindex="-1"></a>We compare five approaches. Only our two proposed methods (imputation and DR/ML) should recover the true ATT = 1.0.</span>
+<span id="cb20-102"><a href="#cb20-102" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-103"><a href="#cb20-103" aria-hidden="true" tabindex="-1"></a><span class="fu">### Method 0: Naive DiD (no covariates)</span></span>
+<span id="cb20-104"><a href="#cb20-104" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-105"><a href="#cb20-105" aria-hidden="true" tabindex="-1"></a>Ignores $X$ entirely. Biased if parallel trends requires conditioning on $X$.</span>
+<span id="cb20-106"><a href="#cb20-106" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-109"><a href="#cb20-109" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb20-110"><a href="#cb20-110" aria-hidden="true" tabindex="-1"></a><span class="co">#| eval: true</span></span>
+<span id="cb20-111"><a href="#cb20-111" aria-hidden="true" tabindex="-1"></a>res_naive <span class="ot">&lt;-</span> <span class="fu">pte_default</span>(</span>
+<span id="cb20-112"><a href="#cb20-112" aria-hidden="true" tabindex="-1"></a>  <span class="at">yname =</span> <span class="st">"Y"</span>, <span class="at">gname =</span> <span class="st">"G"</span>, <span class="at">tname =</span> <span class="st">"period"</span>, <span class="at">idname =</span> <span class="st">"id"</span>,</span>
+<span id="cb20-113"><a href="#cb20-113" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> sim<span class="sc">$</span>data, <span class="at">d_outcome =</span> <span class="cn">TRUE</span>, <span class="at">est_method =</span> <span class="st">"reg"</span></span>
+<span id="cb20-114"><a href="#cb20-114" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb20-115"><a href="#cb20-115" aria-hidden="true" tabindex="-1"></a>att0 <span class="ot">&lt;-</span> <span class="fu">extract_att</span>(res_naive)</span>
+<span id="cb20-116"><a href="#cb20-116" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"ATT:"</span>, <span class="fu">round</span>(att0<span class="sc">$</span>att, <span class="dv">4</span>), <span class="st">" (SE:"</span>, <span class="fu">round</span>(att0<span class="sc">$</span>se, <span class="dv">4</span>), <span class="st">")</span><span class="sc">\n</span><span class="st">"</span>)</span>
+<span id="cb20-117"><a href="#cb20-117" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb20-118"><a href="#cb20-118" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-119"><a href="#cb20-119" aria-hidden="true" tabindex="-1"></a><span class="fu">### Method 1: Include $X_t$ directly (bad control)</span></span>
+<span id="cb20-120"><a href="#cb20-120" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-121"><a href="#cb20-121" aria-hidden="true" tabindex="-1"></a>Conditions on post-treatment $X_t$. Classic bad control bias.</span>
+<span id="cb20-122"><a href="#cb20-122" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-125"><a href="#cb20-125" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb20-126"><a href="#cb20-126" aria-hidden="true" tabindex="-1"></a><span class="co">#| eval: true</span></span>
+<span id="cb20-127"><a href="#cb20-127" aria-hidden="true" tabindex="-1"></a>res_bad <span class="ot">&lt;-</span> <span class="fu">pte_default</span>(</span>
+<span id="cb20-128"><a href="#cb20-128" aria-hidden="true" tabindex="-1"></a>  <span class="at">yname =</span> <span class="st">"Y"</span>, <span class="at">gname =</span> <span class="st">"G"</span>, <span class="at">tname =</span> <span class="st">"period"</span>, <span class="at">idname =</span> <span class="st">"id"</span>,</span>
+<span id="cb20-129"><a href="#cb20-129" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> sim<span class="sc">$</span>data, <span class="at">d_outcome =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb20-130"><a href="#cb20-130" aria-hidden="true" tabindex="-1"></a>  <span class="at">d_covs_formula =</span> <span class="sc">~</span>X, <span class="at">est_method =</span> <span class="st">"reg"</span></span>
+<span id="cb20-131"><a href="#cb20-131" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb20-132"><a href="#cb20-132" aria-hidden="true" tabindex="-1"></a>att1 <span class="ot">&lt;-</span> <span class="fu">extract_att</span>(res_bad)</span>
+<span id="cb20-133"><a href="#cb20-133" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"ATT:"</span>, <span class="fu">round</span>(att1<span class="sc">$</span>att, <span class="dv">4</span>), <span class="st">" (SE:"</span>, <span class="fu">round</span>(att1<span class="sc">$</span>se, <span class="dv">4</span>), <span class="st">")</span><span class="sc">\n</span><span class="st">"</span>)</span>
+<span id="cb20-134"><a href="#cb20-134" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb20-135"><a href="#cb20-135" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-136"><a href="#cb20-136" aria-hidden="true" tabindex="-1"></a><span class="fu">### Method 2: Pre-treatment $X$ only</span></span>
+<span id="cb20-137"><a href="#cb20-137" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-138"><a href="#cb20-138" aria-hidden="true" tabindex="-1"></a>Uses time-invariant covariates $Z$. Works under restrictive conditions.</span>
+<span id="cb20-139"><a href="#cb20-139" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-142"><a href="#cb20-142" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb20-143"><a href="#cb20-143" aria-hidden="true" tabindex="-1"></a><span class="co">#| eval: true</span></span>
+<span id="cb20-144"><a href="#cb20-144" aria-hidden="true" tabindex="-1"></a>res_pretreat <span class="ot">&lt;-</span> <span class="fu">pte_default</span>(</span>
+<span id="cb20-145"><a href="#cb20-145" aria-hidden="true" tabindex="-1"></a>  <span class="at">yname =</span> <span class="st">"Y"</span>, <span class="at">gname =</span> <span class="st">"G"</span>, <span class="at">tname =</span> <span class="st">"period"</span>, <span class="at">idname =</span> <span class="st">"id"</span>,</span>
+<span id="cb20-146"><a href="#cb20-146" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> sim<span class="sc">$</span>data, <span class="at">d_outcome =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb20-147"><a href="#cb20-147" aria-hidden="true" tabindex="-1"></a>  <span class="at">xformla =</span> <span class="sc">~</span>Z <span class="sc">+</span> W, <span class="at">est_method =</span> <span class="st">"reg"</span></span>
+<span id="cb20-148"><a href="#cb20-148" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb20-149"><a href="#cb20-149" aria-hidden="true" tabindex="-1"></a>att2 <span class="ot">&lt;-</span> <span class="fu">extract_att</span>(res_pretreat)</span>
+<span id="cb20-150"><a href="#cb20-150" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"ATT:"</span>, <span class="fu">round</span>(att2<span class="sc">$</span>att, <span class="dv">4</span>), <span class="st">" (SE:"</span>, <span class="fu">round</span>(att2<span class="sc">$</span>se, <span class="dv">4</span>), <span class="st">")</span><span class="sc">\n</span><span class="st">"</span>)</span>
+<span id="cb20-151"><a href="#cb20-151" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb20-152"><a href="#cb20-152" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-153"><a href="#cb20-153" aria-hidden="true" tabindex="-1"></a><span class="fu">### Method 3: Imputation (our proposal)</span></span>
+<span id="cb20-154"><a href="#cb20-154" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-155"><a href="#cb20-155" aria-hidden="true" tabindex="-1"></a>Imputes the counterfactual $X_t(0)$ for treated units, then runs DiD.</span>
+<span id="cb20-156"><a href="#cb20-156" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-159"><a href="#cb20-159" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb20-160"><a href="#cb20-160" aria-hidden="true" tabindex="-1"></a>res_imp <span class="ot">&lt;-</span> <span class="fu">bc_att_gt</span>(</span>
+<span id="cb20-161"><a href="#cb20-161" aria-hidden="true" tabindex="-1"></a>  <span class="at">yname =</span> <span class="st">"Y"</span>, <span class="at">gname =</span> <span class="st">"G"</span>, <span class="at">tname =</span> <span class="st">"period"</span>, <span class="at">idname =</span> <span class="st">"id"</span>,</span>
+<span id="cb20-162"><a href="#cb20-162" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> sim<span class="sc">$</span>data,</span>
+<span id="cb20-163"><a href="#cb20-163" aria-hidden="true" tabindex="-1"></a>  <span class="at">bad_control_formula =</span> <span class="sc">~</span>X,</span>
+<span id="cb20-164"><a href="#cb20-164" aria-hidden="true" tabindex="-1"></a>  <span class="at">xformla =</span> <span class="sc">~</span>Z <span class="sc">+</span> W,</span>
+<span id="cb20-165"><a href="#cb20-165" aria-hidden="true" tabindex="-1"></a>  <span class="at">est_method =</span> <span class="st">"imputation"</span>,</span>
+<span id="cb20-166"><a href="#cb20-166" aria-hidden="true" tabindex="-1"></a>  <span class="at">lagged_outcome_cov =</span> <span class="cn">FALSE</span></span>
+<span id="cb20-167"><a href="#cb20-167" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb20-168"><a href="#cb20-168" aria-hidden="true" tabindex="-1"></a>att3 <span class="ot">&lt;-</span> <span class="fu">extract_att</span>(res_imp)</span>
+<span id="cb20-169"><a href="#cb20-169" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"ATT:"</span>, <span class="fu">round</span>(att3<span class="sc">$</span>att, <span class="dv">4</span>), <span class="st">" (SE:"</span>, <span class="fu">round</span>(att3<span class="sc">$</span>se, <span class="dv">4</span>), <span class="st">")</span><span class="sc">\n</span><span class="st">"</span>)</span>
+<span id="cb20-170"><a href="#cb20-170" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb20-171"><a href="#cb20-171" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-172"><a href="#cb20-172" aria-hidden="true" tabindex="-1"></a><span class="fu">### Method 4: Doubly Robust ML (our proposal)</span></span>
+<span id="cb20-173"><a href="#cb20-173" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-174"><a href="#cb20-174" aria-hidden="true" tabindex="-1"></a>Combines the imputation approach with an AIPW correction using random forest propensity scores (cross-fitted via <span class="co">[</span><span class="ot">`grf`</span><span class="co">](https://grf-labs.github.io/grf/)</span>). Consistent if **either** the outcome model **or** the propensity score is correctly specified.</span>
+<span id="cb20-175"><a href="#cb20-175" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-178"><a href="#cb20-178" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb20-179"><a href="#cb20-179" aria-hidden="true" tabindex="-1"></a>res_ml <span class="ot">&lt;-</span> <span class="fu">bc_att_gt</span>(</span>
+<span id="cb20-180"><a href="#cb20-180" aria-hidden="true" tabindex="-1"></a>  <span class="at">yname =</span> <span class="st">"Y"</span>, <span class="at">gname =</span> <span class="st">"G"</span>, <span class="at">tname =</span> <span class="st">"period"</span>, <span class="at">idname =</span> <span class="st">"id"</span>,</span>
+<span id="cb20-181"><a href="#cb20-181" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> sim<span class="sc">$</span>data,</span>
+<span id="cb20-182"><a href="#cb20-182" aria-hidden="true" tabindex="-1"></a>  <span class="at">bad_control_formula =</span> <span class="sc">~</span>X,</span>
+<span id="cb20-183"><a href="#cb20-183" aria-hidden="true" tabindex="-1"></a>  <span class="at">xformla =</span> <span class="sc">~</span>Z <span class="sc">+</span> W,</span>
+<span id="cb20-184"><a href="#cb20-184" aria-hidden="true" tabindex="-1"></a>  <span class="at">est_method =</span> <span class="st">"dr_ml"</span>,</span>
+<span id="cb20-185"><a href="#cb20-185" aria-hidden="true" tabindex="-1"></a>  <span class="at">lagged_outcome_cov =</span> <span class="cn">FALSE</span></span>
+<span id="cb20-186"><a href="#cb20-186" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb20-187"><a href="#cb20-187" aria-hidden="true" tabindex="-1"></a>att4 <span class="ot">&lt;-</span> <span class="fu">extract_att</span>(res_ml)</span>
+<span id="cb20-188"><a href="#cb20-188" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"ATT:"</span>, <span class="fu">round</span>(att4<span class="sc">$</span>att, <span class="dv">4</span>), <span class="st">" (SE:"</span>, <span class="fu">round</span>(att4<span class="sc">$</span>se, <span class="dv">4</span>), <span class="st">")</span><span class="sc">\n</span><span class="st">"</span>)</span>
+<span id="cb20-189"><a href="#cb20-189" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb20-190"><a href="#cb20-190" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-191"><a href="#cb20-191" aria-hidden="true" tabindex="-1"></a><span class="fu">## Part 4: Comparison table</span></span>
+<span id="cb20-192"><a href="#cb20-192" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-195"><a href="#cb20-195" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb20-196"><a href="#cb20-196" aria-hidden="true" tabindex="-1"></a>results <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb20-197"><a href="#cb20-197" aria-hidden="true" tabindex="-1"></a>  <span class="at">Method =</span> <span class="fu">c</span>(</span>
+<span id="cb20-198"><a href="#cb20-198" aria-hidden="true" tabindex="-1"></a>    <span class="st">"Naive DiD (no covariates)"</span>,</span>
+<span id="cb20-199"><a href="#cb20-199" aria-hidden="true" tabindex="-1"></a>    <span class="st">"Include X_t (bad control)"</span>,</span>
+<span id="cb20-200"><a href="#cb20-200" aria-hidden="true" tabindex="-1"></a>    <span class="st">"Pre-treatment X only"</span>,</span>
+<span id="cb20-201"><a href="#cb20-201" aria-hidden="true" tabindex="-1"></a>    <span class="st">"Imputation (proposed)"</span>,</span>
+<span id="cb20-202"><a href="#cb20-202" aria-hidden="true" tabindex="-1"></a>    <span class="st">"DR/ML (proposed)"</span></span>
+<span id="cb20-203"><a href="#cb20-203" aria-hidden="true" tabindex="-1"></a>  ),</span>
+<span id="cb20-204"><a href="#cb20-204" aria-hidden="true" tabindex="-1"></a>  <span class="at">ATT =</span> <span class="fu">c</span>(att0<span class="sc">$</span>att, att1<span class="sc">$</span>att, att2<span class="sc">$</span>att, att3<span class="sc">$</span>att, att4<span class="sc">$</span>att),</span>
+<span id="cb20-205"><a href="#cb20-205" aria-hidden="true" tabindex="-1"></a>  <span class="at">SE =</span> <span class="fu">c</span>(att0<span class="sc">$</span>se, att1<span class="sc">$</span>se, att2<span class="sc">$</span>se, att3<span class="sc">$</span>se, att4<span class="sc">$</span>se)</span>
+<span id="cb20-206"><a href="#cb20-206" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb20-207"><a href="#cb20-207" aria-hidden="true" tabindex="-1"></a>results<span class="sc">$</span>Bias <span class="ot">&lt;-</span> results<span class="sc">$</span>ATT <span class="sc">-</span> sim<span class="sc">$</span>true_att</span>
+<span id="cb20-208"><a href="#cb20-208" aria-hidden="true" tabindex="-1"></a>results<span class="sc">$</span>CI_lower <span class="ot">&lt;-</span> results<span class="sc">$</span>ATT <span class="sc">-</span> <span class="fl">1.96</span> <span class="sc">*</span> results<span class="sc">$</span>SE</span>
+<span id="cb20-209"><a href="#cb20-209" aria-hidden="true" tabindex="-1"></a>results<span class="sc">$</span>CI_upper <span class="ot">&lt;-</span> results<span class="sc">$</span>ATT <span class="sc">+</span> <span class="fl">1.96</span> <span class="sc">*</span> results<span class="sc">$</span>SE</span>
+<span id="cb20-210"><a href="#cb20-210" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-211"><a href="#cb20-211" aria-hidden="true" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(</span>
+<span id="cb20-212"><a href="#cb20-212" aria-hidden="true" tabindex="-1"></a>  results,</span>
+<span id="cb20-213"><a href="#cb20-213" aria-hidden="true" tabindex="-1"></a>  <span class="at">digits =</span> <span class="dv">4</span>,</span>
+<span id="cb20-214"><a href="#cb20-214" aria-hidden="true" tabindex="-1"></a>  <span class="at">col.names =</span> <span class="fu">c</span>(<span class="st">"Method"</span>, <span class="st">"ATT"</span>, <span class="st">"SE"</span>, <span class="st">"Bias"</span>, <span class="st">"CI Lower"</span>, <span class="st">"CI Upper"</span>),</span>
+<span id="cb20-215"><a href="#cb20-215" aria-hidden="true" tabindex="-1"></a>  <span class="at">caption =</span> <span class="fu">paste0</span>(<span class="st">"Comparison of estimators (True ATT = "</span>, sim<span class="sc">$</span>true_att, <span class="st">")"</span>)</span>
+<span id="cb20-216"><a href="#cb20-216" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb20-217"><a href="#cb20-217" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb20-218"><a href="#cb20-218" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-219"><a href="#cb20-219" aria-hidden="true" tabindex="-1"></a>The naive DiD and bad control approaches are biased. The pre-treatment $X$ approach may or may not work depending on the DGP. Our imputation and DR/ML methods recover the true ATT.</span>
+<span id="cb20-220"><a href="#cb20-220" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-221"><a href="#cb20-221" aria-hidden="true" tabindex="-1"></a><span class="fu">## Part 5: Summary</span></span>
+<span id="cb20-222"><a href="#cb20-222" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-223"><a href="#cb20-223" aria-hidden="true" tabindex="-1"></a>::: {.callout-tip}</span>
+<span id="cb20-224"><a href="#cb20-224" aria-hidden="true" tabindex="-1"></a><span class="fu">## Key takeaways</span></span>
+<span id="cb20-225"><a href="#cb20-225" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-226"><a href="#cb20-226" aria-hidden="true" tabindex="-1"></a><span class="ss">1. </span>**Including post-treatment $X_t$ directly**: biased (bad control)</span>
+<span id="cb20-227"><a href="#cb20-227" aria-hidden="true" tabindex="-1"></a><span class="ss">2. </span>**Dropping $X_t$ entirely**: may violate parallel trends</span>
+<span id="cb20-228"><a href="#cb20-228" aria-hidden="true" tabindex="-1"></a><span class="ss">3. </span>**Using pre-treatment $X_{t-1}$ only**: works under restrictive conditions</span>
+<span id="cb20-229"><a href="#cb20-229" aria-hidden="true" tabindex="-1"></a><span class="ss">4. </span>**Imputation**: impute $X_t(0)$ for treated, then DiD --- our method</span>
+<span id="cb20-230"><a href="#cb20-230" aria-hidden="true" tabindex="-1"></a><span class="ss">5. </span>**DR/ML**: imputation + AIPW with random forest propensity scores --- our method</span>
+<span id="cb20-231"><a href="#cb20-231" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-232"><a href="#cb20-232" aria-hidden="true" tabindex="-1"></a>Methods 4 and 5 require **Covariate Unconfoundedness**: $X_t(0) \perp<span class="sc">\!\!\!</span>\perp D \mid X_{t-1}, W, Z$</span>
+<span id="cb20-233"><a href="#cb20-233" aria-hidden="true" tabindex="-1"></a>:::</span>
+<span id="cb20-234"><a href="#cb20-234" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-235"><a href="#cb20-235" aria-hidden="true" tabindex="-1"></a>For the full theoretical treatment, see <span class="co">[</span><span class="ot">Caetano, Callaway, Payne, and Sant'Anna (2024)</span><span class="co">](https://arxiv.org/abs/2405.10557)</span>.</span>
+</code></pre></div><button title="Copy to Clipboard" class="code-copy-button" data-in-quarto-modal=""><i class="bi"></i></button></div>
+</div></div></div></div></div>
+</div> <!-- /content -->
+<footer class="footer">
+  <div class="nav-footer">
+    <div class="nav-footer-left">
+      &nbsp;
+    </div>   
+    <div class="nav-footer-center">
+<p>Caetano, Callaway, Payne, and Sant’Anna (2024). <a href="https://arxiv.org/abs/2405.10557">Paper</a> | <a href="https://github.com/hsantanna88/bad-controls">R Package</a></p>
+</div>
+    <div class="nav-footer-right">
+      &nbsp;
+    </div>
+  </div>
+</footer>
+
+
+
+
+</body></html>

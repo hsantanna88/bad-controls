@@ -1,0 +1,184 @@
+[
+  {
+    "objectID": "example.html",
+    "href": "example.html",
+    "title": "Worked Example",
+    "section": "",
+    "text": "This walkthrough uses simulated data where the true ATT is known, so you can verify that the estimators recover the correct answer."
+  },
+  {
+    "objectID": "example.html#setup",
+    "href": "example.html#setup",
+    "title": "Worked Example",
+    "section": "Setup",
+    "text": "Setup\n\nlibrary(badcontrols)\nlibrary(pte)\nlibrary(ggplot2)\nlibrary(dplyr)\n\nset.seed(20240301)"
+  },
+  {
+    "objectID": "example.html#part-1-simulate-data",
+    "href": "example.html#part-1-simulate-data",
+    "title": "Worked Example",
+    "section": "Part 1: Simulate data",
+    "text": "Part 1: Simulate data\nWe simulate a staggered DiD dataset where:\n\nTreatment directly affects \\(Y\\) (direct ATT = 0.2)\nTreatment also shifts \\(X_t\\) by \\(\\theta = 0.8\\) (bad control!)\n\\(X_t\\) affects \\(Y_t\\) with coefficient \\(\\beta = 1.0\\)\nTrue total ATT = \\(0.2 + 1.0 \\times 0.8 = 1.0\\)\n\n\nsim &lt;- simulate_bad_controls(\n  n = 2000,\n  T_max = 4,\n  direct_att = 0.2,\n  x_effect_on_y = 1.0,\n  treatment_effect_on_x = 0.8\n)\n\ncat(\"True ATT:\", sim$true_att, \"\\n\")\n\nTrue ATT: 1 \n\ncat(\"Periods:\", sort(unique(sim$data$period)), \"\\n\")\n\nPeriods: 1 2 3 4 \n\ncat(\"Treatment groups:\", sort(unique(sim$data$G)), \"\\n\")\n\nTreatment groups: 0 3 4 \n\n\nThe data has 8000 rows (panel of 2000 units over 4 periods)."
+  },
+  {
+    "objectID": "example.html#part-2-visualize-the-problem",
+    "href": "example.html#part-2-visualize-the-problem",
+    "title": "Worked Example",
+    "section": "Part 2: Visualize the problem",
+    "text": "Part 2: Visualize the problem\nTreatment causally shifts \\(X_t\\), creating divergent paths between treated and control groups after treatment onset:\n\nx_means &lt;- sim$data |&gt;\n  mutate(Group = ifelse(G &gt; 0, \"Treated\", \"Never-Treated\")) |&gt;\n  group_by(Group, period) |&gt;\n  summarize(mean_X = mean(X), .groups = \"drop\")\n\nggplot(x_means, aes(x = period, y = mean_X, color = Group)) +\n  geom_line(linewidth = 1.2) +\n  geom_point(size = 3) +\n  geom_vline(xintercept = 2.5, linetype = \"dashed\", alpha = 0.5) +\n  annotate(\"text\", x = 2.7, y = max(x_means$mean_X),\n           label = \"Treatment\\nstarts\", hjust = 0, size = 3.5) +\n  labs(\n    title = \"The Bad Control: X diverges after treatment\",\n    subtitle = \"Treatment causally shifts X, making post-treatment X endogenous\",\n    x = \"Period\", y = \"Mean of X\", color = \"\"\n  ) +\n  theme_minimal(base_size = 14) +\n  theme(legend.position = \"bottom\")\n\n\n\n\n\n\n\n\nAfter treatment onset (period 3), the treated group’s \\(X\\) jumps up. This is the treatment effect on \\(X\\) — the source of the bad control problem. If you condition on post-treatment \\(X\\), you absorb part of the treatment effect."
+  },
+  {
+    "objectID": "example.html#the-role-of-w",
+    "href": "example.html#the-role-of-w",
+    "title": "Worked Example",
+    "section": "The role of W",
+    "text": "The role of W\nIn the simulation, \\(W\\) is a pre-treatment variable that confounds both treatment \\(D\\) and the covariate \\(X_t\\). Looking at the DAG: \\(D \\leftarrow W \\rightarrow X_t(0)\\). Without conditioning on \\(W\\), the imputation model would inherit this confounding — even after controlling for \\(X_{t-1}\\) and \\(Z\\).\nIn bc_att_gt(), we include \\(W\\) via the xformla argument. The imputation model estimated among controls is:\n\\[\nX_t = \\hat{f}(X_{t-1}, W, Z)\n\\]\nand the predicted \\(\\hat{X}_t(0)\\) for treated units uses their own pre-treatment values of \\(X_{t-1}\\), \\(W\\), and \\(Z\\).\nSee the Estimation page for more on when \\(W\\) is needed and what can serve as \\(W\\)."
+  },
+  {
+    "objectID": "example.html#part-3-compare-estimators",
+    "href": "example.html#part-3-compare-estimators",
+    "title": "Worked Example",
+    "section": "Part 3: Compare estimators",
+    "text": "Part 3: Compare estimators\nWe compare five approaches. Only our two proposed methods (imputation and DR/ML) should recover the true ATT = 1.0.\n\nMethod 0: Naive DiD (no covariates)\nIgnores \\(X\\) entirely. Biased if parallel trends requires conditioning on \\(X\\).\n\nres_naive &lt;- pte_default(\n  yname = \"Y\", gname = \"G\", tname = \"period\", idname = \"id\",\n  data = sim$data, d_outcome = TRUE, est_method = \"reg\"\n)\natt0 &lt;- extract_att(res_naive)\ncat(\"ATT:\", round(att0$att, 4), \" (SE:\", round(att0$se, 4), \")\\n\")\n\nATT: 1.355  (SE: 0.0265 )\n\n\n\n\nMethod 1: Include \\(X_t\\) directly (bad control)\nConditions on post-treatment \\(X_t\\). Classic bad control bias.\n\nres_bad &lt;- pte_default(\n  yname = \"Y\", gname = \"G\", tname = \"period\", idname = \"id\",\n  data = sim$data, d_outcome = TRUE,\n  d_covs_formula = ~X, est_method = \"reg\"\n)\natt1 &lt;- extract_att(res_bad)\ncat(\"ATT:\", round(att1$att, 4), \" (SE:\", round(att1$se, 4), \")\\n\")\n\nATT: 0.3418  (SE: 0.0291 )\n\n\n\n\nMethod 2: Pre-treatment \\(X\\) only\nUses time-invariant covariates \\(Z\\). Works under restrictive conditions.\n\nres_pretreat &lt;- pte_default(\n  yname = \"Y\", gname = \"G\", tname = \"period\", idname = \"id\",\n  data = sim$data, d_outcome = TRUE,\n  xformla = ~Z + W, est_method = \"reg\"\n)\natt2 &lt;- extract_att(res_pretreat)\ncat(\"ATT:\", round(att2$att, 4), \" (SE:\", round(att2$se, 4), \")\\n\")\n\nATT: 1.0278  (SE: 0.0243 )\n\n\n\n\nMethod 3: Imputation (our proposal)\nImputes the counterfactual \\(X_t(0)\\) for treated units, then runs DiD.\n\nres_imp &lt;- bc_att_gt(\n  yname = \"Y\", gname = \"G\", tname = \"period\", idname = \"id\",\n  data = sim$data,\n  bad_control_formula = ~X,\n  xformla = ~Z + W,\n  est_method = \"imputation\",\n  lagged_outcome_cov = FALSE\n)\natt3 &lt;- extract_att(res_imp)\ncat(\"ATT:\", round(att3$att, 4), \" (SE:\", round(att3$se, 4), \")\\n\")\n\nATT: 1.0133  (SE: 0.0046 )\n\n\n\n\nMethod 4: Doubly Robust ML (our proposal)\nCombines the imputation approach with an AIPW correction using random forest propensity scores (cross-fitted via grf). Consistent if either the outcome model or the propensity score is correctly specified.\n\nres_ml &lt;- bc_att_gt(\n  yname = \"Y\", gname = \"G\", tname = \"period\", idname = \"id\",\n  data = sim$data,\n  bad_control_formula = ~X,\n  xformla = ~Z + W,\n  est_method = \"dr_ml\",\n  lagged_outcome_cov = FALSE\n)\natt4 &lt;- extract_att(res_ml)\ncat(\"ATT:\", round(att4$att, 4), \" (SE:\", round(att4$se, 4), \")\\n\")\n\nATT: 1.0308  (SE: 0.0287 )"
+  },
+  {
+    "objectID": "example.html#part-4-comparison-table",
+    "href": "example.html#part-4-comparison-table",
+    "title": "Worked Example",
+    "section": "Part 4: Comparison table",
+    "text": "Part 4: Comparison table\n\nresults &lt;- data.frame(\n  Method = c(\n    \"Naive DiD (no covariates)\",\n    \"Include X_t (bad control)\",\n    \"Pre-treatment X only\",\n    \"Imputation (proposed)\",\n    \"DR/ML (proposed)\"\n  ),\n  ATT = c(att0$att, att1$att, att2$att, att3$att, att4$att),\n  SE = c(att0$se, att1$se, att2$se, att3$se, att4$se)\n)\nresults$Bias &lt;- results$ATT - sim$true_att\nresults$CI_lower &lt;- results$ATT - 1.96 * results$SE\nresults$CI_upper &lt;- results$ATT + 1.96 * results$SE\n\nknitr::kable(\n  results,\n  digits = 4,\n  col.names = c(\"Method\", \"ATT\", \"SE\", \"Bias\", \"CI Lower\", \"CI Upper\"),\n  caption = paste0(\"Comparison of estimators (True ATT = \", sim$true_att, \")\")\n)\n\n\nComparison of estimators (True ATT = 1)\n\n\n\n\n\n\n\n\n\n\nMethod\nATT\nSE\nBias\nCI Lower\nCI Upper\n\n\n\n\nNaive DiD (no covariates)\n1.3550\n0.0265\n0.3550\n1.3030\n1.4070\n\n\nInclude X_t (bad control)\n0.3418\n0.0291\n-0.6582\n0.2847\n0.3988\n\n\nPre-treatment X only\n1.0278\n0.0243\n0.0278\n0.9801\n1.0755\n\n\nImputation (proposed)\n1.0133\n0.0046\n0.0133\n1.0044\n1.0223\n\n\nDR/ML (proposed)\n1.0308\n0.0287\n0.0308\n0.9744\n1.0871\n\n\n\n\n\nThe naive DiD and bad control approaches are biased. The pre-treatment \\(X\\) approach may or may not work depending on the DGP. Our imputation and DR/ML methods recover the true ATT."
+  },
+  {
+    "objectID": "example.html#part-5-summary",
+    "href": "example.html#part-5-summary",
+    "title": "Worked Example",
+    "section": "Part 5: Summary",
+    "text": "Part 5: Summary\n\n\n\n\n\n\nTipKey takeaways\n\n\n\n\nIncluding post-treatment \\(X_t\\) directly: biased (bad control)\nDropping \\(X_t\\) entirely: may violate parallel trends\nUsing pre-treatment \\(X_{t-1}\\) only: works under restrictive conditions\nImputation: impute \\(X_t(0)\\) for treated, then DiD — our method\nDR/ML: imputation + AIPW with random forest propensity scores — our method\n\nMethods 4 and 5 require Covariate Unconfoundedness: \\(X_t(0) \\perp\\!\\!\\!\\perp D \\mid X_{t-1}, W, Z\\)\n\n\nFor the full theoretical treatment, see Caetano, Callaway, Payne, and Sant’Anna (2024)."
+  },
+  {
+    "objectID": "index.html#what-is-the-bad-controls-problem",
+    "href": "index.html#what-is-the-bad-controls-problem",
+    "title": "Difference-in-Differences with Bad Controls",
+    "section": "What is the bad controls problem?",
+    "text": "What is the bad controls problem?\nIn difference-in-differences, researchers often condition on time-varying covariates to make parallel trends more plausible. But if a covariate is affected by treatment, conditioning on it introduces post-treatment selection bias — a bad control.\nThis guide shows you how to detect and fix this problem using the badcontrols R package."
+  },
+  {
+    "objectID": "index.html#the-core-tension",
+    "href": "index.html#the-core-tension",
+    "title": "Difference-in-Differences with Bad Controls",
+    "section": "The core tension",
+    "text": "The core tension\nYou have a time-varying covariate \\(X_t\\) that you want to include in your DiD model. The problem:\n\n\n\nApproach\nResult\n\n\n\n\nInclude \\(X_t\\) directly\nBiased — post-treatment selection\n\n\nDrop \\(X_t\\) entirely\nBiased — may violate parallel trends\n\n\nUse only \\(X_{t-1}\\)\nWorks under restrictive conditions\n\n\nImpute \\(X_t(0)\\)\nCorrect — our proposed solution\n\n\nDoubly Robust ML\nCorrect — semiparametric, robust"
+  },
+  {
+    "objectID": "index.html#getting-started",
+    "href": "index.html#getting-started",
+    "title": "Difference-in-Differences with Bad Controls",
+    "section": "Getting started",
+    "text": "Getting started\n\nInstallation\n# Install the badcontrols package\ndevtools::install_github(\"hsantanna88/bad-controls\")\n\n# Dependencies\ndevtools::install_github(\"bcallaway11/pte\")\n\n# Optional: for the DR/ML estimator\ninstall.packages(\"grf\")\n\n\nQuick example\nlibrary(badcontrols)\nset.seed(20240301)\n\n# Simulate data with a known bad control\nsim &lt;- simulate_bad_controls(n = 2000, T_max = 4)\n\n# Imputation approach\nres &lt;- bc_att_gt(\n  yname = \"Y\", gname = \"G\", tname = \"period\", idname = \"id\",\n  data = sim$data,\n  bad_control_formula = ~X,\n  xformla = ~Z + W,\n  est_method = \"imputation\"\n)\nextract_att(res)"
+  },
+  {
+    "objectID": "index.html#guide-structure",
+    "href": "index.html#guide-structure",
+    "title": "Difference-in-Differences with Bad Controls",
+    "section": "Guide structure",
+    "text": "Guide structure\n\nThe Problem — What goes wrong when you condition on a post-treatment covariate, with DAGs and intuition\nEstimation — Our two proposed estimators: imputation and doubly robust ML\nWorked Example — Full step-by-step R walkthrough with simulated data, comparing all methods"
+  },
+  {
+    "objectID": "index.html#citation",
+    "href": "index.html#citation",
+    "title": "Difference-in-Differences with Bad Controls",
+    "section": "Citation",
+    "text": "Citation\nCaetano, C., Callaway, B., Payne, S., and Sant’Anna, H. (2024). “Difference-in-Differences with Bad Controls.” arXiv:2405.10557.\n@article{caetano2024bad,\n  title={Difference-in-Differences with Bad Controls},\n  author={Caetano, Carolina and Callaway, Brantly and Payne, Stroud and Sant'Anna, Hugo},\n  year={2024},\n  journal={arXiv preprint arXiv:2405.10557}\n}"
+  },
+  {
+    "objectID": "estimation.html",
+    "href": "estimation.html",
+    "title": "Estimation Methods",
+    "section": "",
+    "text": "We provide two estimators that correctly handle bad controls in DiD. Both require the same core assumption — Covariate Unconfoundedness — but differ in how they estimate the nuisance functions.\n\n\n\n\n\n\n\n\n\nMethod\nNuisance estimation\nRobustness\nWhen to use\n\n\n\n\nImputation\nParametric (OLS)\nSingle robustness\nSimple settings, linear relationships\n\n\nDoubly Robust ML\nOLS outcome + random forest propensity score\nDouble robustness\nWhen you want robustness to model misspecification\n\n\n\nBoth are implemented in the badcontrols R package through bc_att_gt()."
+  },
+  {
+    "objectID": "estimation.html#overview",
+    "href": "estimation.html#overview",
+    "title": "Estimation Methods",
+    "section": "",
+    "text": "We provide two estimators that correctly handle bad controls in DiD. Both require the same core assumption — Covariate Unconfoundedness — but differ in how they estimate the nuisance functions.\n\n\n\n\n\n\n\n\n\nMethod\nNuisance estimation\nRobustness\nWhen to use\n\n\n\n\nImputation\nParametric (OLS)\nSingle robustness\nSimple settings, linear relationships\n\n\nDoubly Robust ML\nOLS outcome + random forest propensity score\nDouble robustness\nWhen you want robustness to model misspecification\n\n\n\nBoth are implemented in the badcontrols R package through bc_att_gt()."
+  },
+  {
+    "objectID": "estimation.html#the-key-assumption",
+    "href": "estimation.html#the-key-assumption",
+    "title": "Estimation Methods",
+    "section": "The key assumption",
+    "text": "The key assumption\nCovariate Unconfoundedness (Assumption 5 in the paper):\n\\[\nX_t(0) \\perp\\!\\!\\!\\perp D \\mid X_{t-1}, W, Z\n\\]\nwhere:\n\n\\(X_t(0)\\) is the counterfactual covariate (what \\(X_t\\) would be without treatment)\n\\(X_{t-1}\\) is the pre-treatment covariate\n\\(W\\) is an auxiliary variable (typically \\(Y_{t-1}\\), the lagged outcome)\n\\(Z\\) is a vector of time-invariant covariates\n\nThis says: conditional on what we observe pre-treatment, the counterfactual \\(X_t(0)\\) is independent of treatment status. The control group’s \\(X_t\\) model can be used to predict the treated group’s counterfactual."
+  },
+  {
+    "objectID": "estimation.html#the-role-of-w-the-auxiliary-variable",
+    "href": "estimation.html#the-role-of-w-the-auxiliary-variable",
+    "title": "Estimation Methods",
+    "section": "The role of W: the auxiliary variable",
+    "text": "The role of W: the auxiliary variable\nThe auxiliary variable \\(W\\) deserves special attention. Why isn’t \\((X_{t-1}, Z)\\) enough?\nAs the DAG shows, \\(W\\) is a pre-treatment confounder of both treatment \\(D\\) and the post-treatment covariate \\(X_t\\):\n\\[\nD \\leftarrow W \\rightarrow X_t(0)\n\\]\nIf you only condition on \\((X_{t-1}, Z)\\), the confounding path through \\(W\\) remains open. The imputation model would systematically mispredict \\(X_t(0)\\) for treated units because the treated and control groups differ in their \\(W\\) distributions.\nConditioning on \\(W\\) closes the backdoor path and ensures the imputation is unbiased. In the badcontrols package, \\(W\\) is included via the xformla argument. The imputation model becomes:\n\\[\nX_t = f(X_{t-1}, W, Z) + \\varepsilon\n\\]\n\n\n\n\n\n\nNoteWhen is W not needed?\n\n\n\nIf Simple Covariate Unconfoundedness holds — \\(X_t(0) \\perp D \\mid X_{t-1}, Z\\) — then \\(W\\) is not required. This is a stronger condition that says \\((X_{t-1}, Z)\\) alone are sufficient. You can test sensitivity to this by running the estimator with and without \\(W\\).\n\n\n\n\n\n\n\n\nTipWhat can serve as W?\n\n\n\nAny pre-treatment variable that confounds treatment selection and covariate evolution. Examples:\n\nPre-treatment covariates observed in the data (e.g., baseline health, prior earnings)\nLagged outcomes \\(Y_{t-1}\\) (set lagged_outcome_cov = TRUE)\nOther lagged covariates measured before treatment\n\nThe key requirement is that \\(W\\) is (i) not affected by treatment and (ii) closes the confounding path between \\(D\\) and \\(X_t(0)\\)."
+  },
+  {
+    "objectID": "estimation.html#method-1-imputation",
+    "href": "estimation.html#method-1-imputation",
+    "title": "Estimation Methods",
+    "section": "Method 1: Imputation",
+    "text": "Method 1: Imputation\n\nAlgorithm\nStep 1: Impute \\(X_t(0)\\)\nUsing the control group (where \\(X_t = X_t(0)\\)), estimate:\n\\[\nX_t = \\alpha + \\beta_1 X_{t-1} + \\beta_2 W + \\beta_3 Z + \\varepsilon\n\\]\nFor treated units, predict \\(\\hat{X}_t(0)\\) using the estimated coefficients and their pre-treatment values.\nStep 2: Run DiD with imputed covariate\nReplace the observed \\(X_t\\) with \\(\\hat{X}_t(0)\\) for treated units, then estimate ATT using standard DiD methods conditioning on \\(\\hat{X}_t(0)\\).\n\n\nR code\nlibrary(badcontrols)\n\nres_imp &lt;- bc_att_gt(\n  yname = \"Y\",\n  gname = \"G\",\n  tname = \"period\",\n  idname = \"id\",\n  data = sim$data,\n  bad_control_formula = ~X,   # X is the bad control to impute\n  xformla = ~Z + W,             # pre-treatment covariates (W is the auxiliary variable)\n  est_method = \"imputation\"\n)\n\nextract_att(res_imp)\n\n\nWhen it works well\n\nLinear relationship between \\(X_t\\) and \\((X_{t-1}, W, Z)\\)\nModerate sample sizes\nFast computation"
+  },
+  {
+    "objectID": "estimation.html#method-2-doubly-robust-ml",
+    "href": "estimation.html#method-2-doubly-robust-ml",
+    "title": "Estimation Methods",
+    "section": "Method 2: Doubly Robust ML",
+    "text": "Method 2: Doubly Robust ML\n\nThe idea\nThe DR estimator builds on the imputation approach but adds a propensity score correction that provides double robustness. It combines three steps:\n\nImpute \\(X_t(0)\\) via OLS (same as Method 1)\nOutcome regression: \\(\\mathbb{E}[\\Delta Y \\mid \\hat{X}_t(0), Z, D=0]\\) via OLS\nGeneralized propensity score: \\(\\Pr(D = 1 \\mid X_{t-1}, W, Z)\\) via random forests (cross-fitted)\n\nThe propensity score is estimated using Athey, Tibshirani, and Wager’s (2019) grf package — specifically, probability_forest with \\(K\\)-fold cross-fitting to avoid overfitting.\nThe ATT is then estimated using an AIPW (augmented inverse probability weighting) score:\n\\[\n\\widehat{ATT}_{DR} = \\frac{1}{n_1}\\sum_{D_i=1} \\hat{\\varepsilon}_i - \\sum_{D_i=0} \\hat{w}_i \\, \\hat{\\varepsilon}_i\n\\]\nwhere \\(\\hat{\\varepsilon}_i = \\Delta Y_i - \\hat{m}(\\hat{X}_{t,i}(0), Z_i)\\) are the outcome regression residuals and \\(\\hat{w}_i\\) are Hajek-normalized inverse probability weights.\n\n\nDouble robustness\nThe AIPW score is consistent if either the outcome model or the propensity score is correctly specified:\n\nIf the outcome model is correct, the IPW correction averages to zero (no harm done)\nIf the propensity score is correct, it reweights the controls to match the treated covariate distribution, fixing any misspecification in the outcome model\n\nThis provides insurance against model misspecification — you get two chances to get it right.\n\n\nCross-fitting\nThe propensity score uses random forests, which are flexible but can overfit. Cross-fitting prevents this:\n\nSplit the sample into \\(K\\) folds\nFor each fold, estimate the propensity score on the remaining \\(K-1\\) folds\nPredict on the held-out fold\n\nThis yields valid inference even with highly flexible ML estimators.\n\n\nR code\nlibrary(badcontrols)\n\nres_ml &lt;- bc_att_gt(\n  yname = \"Y\",\n  gname = \"G\",\n  tname = \"period\",\n  idname = \"id\",\n  data = sim$data,\n  bad_control_formula = ~X,\n  xformla = ~Z + W,\n  est_method = \"dr_ml\"\n)\n\nextract_att(res_ml)\n\n\nWhen it works well\n\nWhen you want robustness to misspecification of the outcome model\nWhen treatment selection depends on covariates in complex, nonlinear ways\nModerate to large sample sizes (the random forest PS needs data)\n\n\n\nRequirements\nThe DR/ML method requires the grf package for random forests:\ninstall.packages(\"grf\")"
+  },
+  {
+    "objectID": "estimation.html#inference",
+    "href": "estimation.html#inference",
+    "title": "Estimation Methods",
+    "section": "Inference",
+    "text": "Inference\nBoth methods produce group-time ATT estimates \\(\\widehat{ATT}(g,t)\\) for each treatment group \\(g\\) and time period \\(t\\). These are aggregated into:\n\nOverall ATT: weighted average across all \\((g,t)\\) cells\nEvent study: ATT by event time (periods relative to treatment)\nGroup-specific ATT: ATT for each treatment cohort\n\nStandard errors are computed via the multiplier bootstrap, using the influence function representation of the estimators.\n# Overall ATT\nextract_att(res)\n\n# The pte infrastructure handles aggregation automatically\nsummary(res)"
+  },
+  {
+    "objectID": "estimation.html#choosing-between-methods",
+    "href": "estimation.html#choosing-between-methods",
+    "title": "Estimation Methods",
+    "section": "Choosing between methods",
+    "text": "Choosing between methods\n\n\n\n\n\nflowchart TD\n    A[Bad control detected] --&gt; B{Relationships linear?}\n    B --&gt;|Yes| C[Imputation]\n    B --&gt;|No / Unsure| D{Large sample?}\n    D --&gt;|Yes| E[DR/ML]\n    D --&gt;|No| F[Imputation with flexible formula]\n\n\n\n\n\n\nIn practice, we recommend running both methods and checking that results are similar. If they diverge substantially, investigate the source of the discrepancy."
+  },
+  {
+    "objectID": "problem.html",
+    "href": "problem.html",
+    "title": "The Bad Controls Problem",
+    "section": "",
+    "text": "Consider a standard staggered DiD setting. You observe panel data with:\n\n\\(Y_{it}\\): outcome\n\\(D_{it}\\): treatment indicator\n\\(X_{it}\\): a time-varying covariate\n\\(Z_i\\): time-invariant covariates\n\nYou want to estimate the ATT, and you believe conditional parallel trends holds:\n\\[\n\\mathbb{E}[Y_t(0) - Y_{t-1}(0) \\mid X_t, D = 1] = \\mathbb{E}[Y_t(0) - Y_{t-1}(0) \\mid X_t, D = 0]\n\\]\nThe problem: \\(X_t\\) is measured after treatment, so it may itself be shifted by treatment."
+  },
+  {
+    "objectID": "problem.html#the-setup",
+    "href": "problem.html#the-setup",
+    "title": "The Bad Controls Problem",
+    "section": "",
+    "text": "Consider a standard staggered DiD setting. You observe panel data with:\n\n\\(Y_{it}\\): outcome\n\\(D_{it}\\): treatment indicator\n\\(X_{it}\\): a time-varying covariate\n\\(Z_i\\): time-invariant covariates\n\nYou want to estimate the ATT, and you believe conditional parallel trends holds:\n\\[\n\\mathbb{E}[Y_t(0) - Y_{t-1}(0) \\mid X_t, D = 1] = \\mathbb{E}[Y_t(0) - Y_{t-1}(0) \\mid X_t, D = 0]\n\\]\nThe problem: \\(X_t\\) is measured after treatment, so it may itself be shifted by treatment."
+  },
+  {
+    "objectID": "problem.html#the-dag",
+    "href": "problem.html#the-dag",
+    "title": "The Bad Controls Problem",
+    "section": "The DAG",
+    "text": "The DAG\nThe causal structure for the post-treatment covariate \\(X_t\\) looks like this (cf. Figure 1 in the paper):\n\n\n\n\n\nflowchart TD\n    W[\"W (auxiliary)\"] --&gt; D\n    W --&gt; Xt[\"X_t\"]\n    Xpre[\"X_{t-1}\"] --&gt; D\n    Xpre --&gt; Xt\n    Z --&gt; D\n    Z --&gt; Xt\n    D --&gt;|bad!| Xt\n\n\n\n\n\n\n\\(W\\) is a pre-treatment variable that confounds both treatment \\(D\\) and the post-treatment covariate \\(X_t\\). The pre-treatment covariate \\(X_{t-1}\\) and time-invariant \\(Z\\) also affect both \\(D\\) and \\(X_t\\).\nThe full causal structure including the outcome is:\n\n\n\n\n\nflowchart LR\n    D --&gt;|direct| Y\n    D --&gt;|bad!| Xt[\"X_t\"]\n    Xt --&gt; Y\n\n\n\n\n\n\nTreatment \\(D\\) affects both \\(Y\\) (directly) and \\(X_t\\) (the bad control). Because \\(X_t\\) also affects \\(Y_t\\), there are two causal channels:\n\nDirect effect: \\(D \\to Y\\)\nIndirect effect: \\(D \\to X_t \\to Y\\) (goes through the bad control)\n\nThe total ATT includes both channels. Conditioning on post-treatment \\(X_t\\) blocks the indirect channel and introduces selection bias."
+  },
+  {
+    "objectID": "problem.html#what-goes-wrong",
+    "href": "problem.html#what-goes-wrong",
+    "title": "The Bad Controls Problem",
+    "section": "What goes wrong?",
+    "text": "What goes wrong?\n\nApproach 1: Include \\(X_t\\) directly\nWhen you condition on post-treatment \\(X_t\\), you are effectively comparing treated and control units with the same observed \\(X_t\\). But treatment shifts \\(X_t\\), so you’re comparing:\n\nTreated units whose \\(X_t\\) was pulled down by bad luck (despite treatment pushing it up)\nControl units whose \\(X_t\\) is naturally at that level\n\nThis is classic post-treatment selection bias. You recover the direct effect minus a bias term, not the total ATT.\n\nIncluding \\(X_t\\): Absorbs the indirect effect \\(D \\to X \\to Y\\). Estimates the direct effect (at best), not the total ATT. Generally biased.\n\n\n\nApproach 2: Drop \\(X_t\\) entirely\nIf parallel trends only holds conditional on \\(X_t\\), then dropping it means the unconditional parallel trends assumption fails. Your DiD estimate is biased in the other direction.\n\nDropping \\(X_t\\): Violates parallel trends if trends differ across \\(X\\) levels. Omitted variable bias.\n\n\n\nApproach 3: Use only \\(X_{t-1}\\)\nUsing the pre-treatment value \\(X_{t-1}\\) avoids the post-treatment selection problem. This works if:\n\\[\n\\mathbb{E}[Y_t(0) - Y_{t-1}(0) \\mid X_{t-1}, D = 1] = \\mathbb{E}[Y_t(0) - Y_{t-1}(0) \\mid X_{t-1}, D = 0]\n\\]\nBut this is a stronger assumption than the original conditional parallel trends. It requires that lagged \\(X\\) is sufficient — the current value \\(X_t(0)\\) adds no information. This may or may not hold.\n\nUsing \\(X_{t-1}\\) only: Works under restrictive conditions (parallel trends conditional on lagged \\(X\\)). May be biased when \\(X_t(0)\\) matters beyond \\(X_{t-1}\\)."
+  },
+  {
+    "objectID": "problem.html#the-solution-impute-x_t0",
+    "href": "problem.html#the-solution-impute-x_t0",
+    "title": "The Bad Controls Problem",
+    "section": "The solution: impute \\(X_t(0)\\)",
+    "text": "The solution: impute \\(X_t(0)\\)\nThe key insight: we can’t use the observed \\(X_t\\) for treated units (it’s contaminated by treatment). But we can predict what \\(X_t\\) would have been without treatment — the counterfactual \\(X_t(0)\\).\nThe idea:\n\nAmong control units, \\(X_t\\) is not affected by treatment, so \\(X_t = X_t(0)\\)\nLearn the relationship \\(X_t \\sim f(X_{t-1}, W, Z)\\) from the control group\nFor treated units, predict \\(\\hat{X}_t(0) = f(X_{t-1}, W, Z)\\)\nRun DiD using the imputed \\(\\hat{X}_t(0)\\) instead of the observed \\(X_t\\)\n\nThis requires Covariate Unconfoundedness:\n\\[\nX_t(0) \\perp\\!\\!\\!\\perp D \\mid X_{t-1}, W, Z\n\\]\nConditional on pre-treatment variables, the counterfactual covariate distribution is the same for treated and control units. Conditioning on \\(W\\) is critical because \\(W\\) confounds both \\(D\\) and \\(X_t(0)\\) — without it, the imputation model would inherit the confounding bias.\n\nImputation: Imputes \\(X_t(0)\\) for treated units using the control group. Recovers the total ATT under Covariate Unconfoundedness.\n\n\nDoubly Robust ML: Combines imputation with propensity score weighting. Consistent if either the outcome model or the propensity score is correctly specified. Uses random forests with cross-fitting.\n\nSee Estimation for details on both methods, and Worked Example for a full R walkthrough."
+  }
+]
