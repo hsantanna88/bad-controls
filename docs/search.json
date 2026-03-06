@@ -81,7 +81,7 @@
     "href": "index.html#guide-structure",
     "title": "Difference-in-Differences with Bad Controls",
     "section": "Guide structure",
-    "text": "Guide structure\n\nThe Problem — What goes wrong when you condition on a post-treatment covariate, with DAGs and intuition\nEstimation — Our two proposed estimators: imputation and doubly robust ML\nWorked Example — Full step-by-step R walkthrough with simulated data, comparing all methods"
+    "text": "Guide structure\n\nThe Problem — What goes wrong when you condition on a post-treatment covariate, with DAGs and intuition\nEstimation — Our two proposed estimators: imputation and doubly robust ML\nWorked Example — Full step-by-step R walkthrough with simulated data, comparing all methods\nApplication — Real-world application: wage scars from job loss (NLSY79), with occupation as the bad control"
   },
   {
     "objectID": "index.html#citation",
@@ -145,6 +145,69 @@
     "title": "Estimation Methods",
     "section": "Choosing between methods",
     "text": "Choosing between methods\n\n\n\n\n\nflowchart TD\n    A[Bad control detected] --&gt; B{Relationships linear?}\n    B --&gt;|Yes| C[Imputation]\n    B --&gt;|No / Unsure| D{Large sample?}\n    D --&gt;|Yes| E[DR/ML]\n    D --&gt;|No| F[Imputation with flexible formula]\n\n\n\n\n\n\nIn practice, we recommend running both methods and checking that results are similar. If they diverge substantially, investigate the source of the discrepancy."
+  },
+  {
+    "objectID": "application.html",
+    "href": "application.html",
+    "title": "Real-World Application",
+    "section": "",
+    "text": "This application demonstrates the bad controls problem using real data from the National Longitudinal Survey of Youth 1979 (NLSY79). The question: how much do wages fall after involuntary job loss?"
+  },
+  {
+    "objectID": "application.html#the-setting",
+    "href": "application.html#the-setting",
+    "title": "Real-World Application",
+    "section": "The setting",
+    "text": "The setting\nWorkers who lose their jobs often suffer persistent wage scars — lower wages that persist even years after re-employment. A natural approach is to estimate the wage scar using DiD, comparing separated workers to those who were never separated.\nBut there’s a catch: job loss also changes occupation. Workers who lose jobs in high-paying occupations frequently end up in lower-paying ones. Occupation is a classic bad control:\n\nYou want to condition on occupation to make parallel trends more plausible (workers in similar occupations have similar wage trends)\nBut occupation is causally affected by job loss (the treatment shifts it)\n\n\n\n\n\n\nflowchart LR\n    D[\"Job Loss\"] --&gt;|direct| Y[\"Wages\"]\n    D --&gt;|bad!| X[\"Occupation\"]\n    X --&gt; Y"
+  },
+  {
+    "objectID": "application.html#the-data",
+    "href": "application.html#the-data",
+    "title": "Real-World Application",
+    "section": "The data",
+    "text": "The data\nThe nlsy_wagescars dataset is a balanced panel of 3,776 individuals from the NLSY79, observed over 9 periods (1984–1993). Treatment is the year of first involuntary job separation.\n\nlibrary(badcontrols)\nlibrary(pte)\nlibrary(ggplot2)\nlibrary(dplyr)\n\ndata(nlsy_wagescars)\n\ncat(\"Panel:\", nrow(nlsy_wagescars), \"obs,\",\n    length(unique(nlsy_wagescars$id)), \"individuals,\",\n    length(unique(nlsy_wagescars$period)), \"periods\\n\")\n\nPanel: 33984 obs, 3776 individuals, 9 periods\n\ncat(\"Treatment groups:\\n\")\n\nTreatment groups:\n\ng_tab &lt;- table(nlsy_wagescars$G[!duplicated(nlsy_wagescars$id)])\nprint(g_tab)\n\n\n   0    1    2    3    4    5    6    7    8    9 \n3415   44   48   42   31   32   34   55   41   34"
+  },
+  {
+    "objectID": "application.html#occupation-changes-after-job-loss",
+    "href": "application.html#occupation-changes-after-job-loss",
+    "title": "Real-World Application",
+    "section": "Occupation changes after job loss",
+    "text": "Occupation changes after job loss\nFirst, let’s verify that occupation is indeed a bad control — that job loss causally shifts it:\n\ntreated &lt;- nlsy_wagescars |&gt;\n  filter(G &gt; 0) |&gt;\n  mutate(event_time = period - G)\n\nocc_change &lt;- treated |&gt;\n  group_by(id) |&gt;\n  mutate(baseline_occ = occ_group[which.min(abs(period - (G - 1)))]) |&gt;\n  ungroup() |&gt;\n  mutate(occ_changed = as.integer(occ_group != baseline_occ)) |&gt;\n  group_by(event_time) |&gt;\n  summarize(pct_changed = mean(occ_changed), .groups = \"drop\")\n\nggplot(occ_change, aes(x = event_time, y = pct_changed)) +\n  geom_line(linewidth = 1.2, color = \"#d7191c\") +\n  geom_point(size = 3, color = \"#d7191c\") +\n  geom_vline(xintercept = -0.5, linetype = \"dashed\", alpha = 0.5) +\n  scale_y_continuous(labels = scales::percent) +\n  labs(\n    title = \"Occupation changes sharply after job loss\",\n    subtitle = \"Fraction in a different occupation than at baseline\",\n    x = \"Event time (periods relative to separation)\",\n    y = \"% in different occupation\"\n  ) +\n  theme_minimal(base_size = 14)\n\n\n\n\n\n\n\n\nAfter separation, the fraction of workers in a different occupation jumps. This confirms that occupation is affected by treatment — conditioning on it post-separation would absorb part of the wage scar."
+  },
+  {
+    "objectID": "application.html#setup",
+    "href": "application.html#setup",
+    "title": "Real-World Application",
+    "section": "Setup",
+    "text": "Setup\nWe prepare the auxiliary variable \\(W\\) (lagged outcome at period 1) for the Covariate Unconfoundedness assumption:\n\nW_df &lt;- nlsy_wagescars |&gt;\n  filter(period == 1) |&gt;\n  select(id, W = lwage)\n\npanel &lt;- nlsy_wagescars |&gt;\n  left_join(W_df, by = \"id\")"
+  },
+  {
+    "objectID": "application.html#comparing-estimators",
+    "href": "application.html#comparing-estimators",
+    "title": "Real-World Application",
+    "section": "Comparing estimators",
+    "text": "Comparing estimators\n\nMethod 0: Naive DiD (no covariates)\n\nres0 &lt;- pte_default(\n  yname = \"lwage\", gname = \"G\", tname = \"period\", idname = \"id\",\n  data = panel, d_outcome = TRUE, est_method = \"reg\"\n)\natt0 &lt;- extract_att(res0)\ncat(\"ATT:\", round(att0$att, 4), \" (SE:\", round(att0$se, 4), \")\\n\")\n\nATT: -0.113  (SE: 0.0331 )\n\n\n\n\nMethod 1: Include occupation directly (bad control)\nThis conditions on post-separation occupation via regression adjustment. It absorbs the indirect effect through occupation downgrading.\n\nres1 &lt;- pte_default(\n  yname = \"lwage\", gname = \"G\", tname = \"period\", idname = \"id\",\n  data = panel, d_outcome = TRUE,\n  d_covs_formula = ~occ_group, est_method = \"reg\"\n)\natt1 &lt;- extract_att(res1)\ncat(\"ATT:\", round(att1$att, 4), \" (SE:\", round(att1$se, 4), \")\\n\")\n\nATT: -0.1131  (SE: 0.0272 )\n\n\n\n\nMethod 2: Pre-treatment covariates only\n\nres2 &lt;- pte_default(\n  yname = \"lwage\", gname = \"G\", tname = \"period\", idname = \"id\",\n  data = panel, d_outcome = TRUE,\n  xformla = ~afqtscore + female + black + hgc, est_method = \"reg\"\n)\natt2 &lt;- extract_att(res2)\ncat(\"ATT:\", round(att2$att, 4), \" (SE:\", round(att2$se, 4), \")\\n\")\n\nATT: -0.09  (SE: 0.0265 )\n\n\n\n\nMethod 3: Imputation (our proposal)\nImputes counterfactual occupation \\(X_t(0)\\) — what occupation would have been without job loss — then runs DiD.\n\nres3 &lt;- bc_att_gt(\n  yname = \"lwage\", gname = \"G\", tname = \"period\", idname = \"id\",\n  data = panel,\n  bad_control_formula = ~occ_group,\n  xformla = ~afqtscore + female + black + hgc + W,\n  est_method = \"imputation\",\n  lagged_outcome_cov = FALSE\n)\natt3 &lt;- extract_att(res3)\ncat(\"ATT:\", round(att3$att, 4), \" (SE:\", round(att3$se, 4), \")\\n\")\n\nATT: -0.0817  (SE: 0.0027 )\n\n\n\n\nMethod 4: Doubly Robust ML (our proposal)\nAdds a random forest propensity score correction for double robustness.\n\nres4 &lt;- bc_att_gt(\n  yname = \"lwage\", gname = \"G\", tname = \"period\", idname = \"id\",\n  data = panel,\n  bad_control_formula = ~occ_group,\n  xformla = ~afqtscore + female + black + hgc + W,\n  est_method = \"dr_ml\",\n  lagged_outcome_cov = FALSE\n)\natt4 &lt;- extract_att(res4)\ncat(\"ATT:\", round(att4$att, 4), \" (SE:\", round(att4$se, 4), \")\\n\")\n\nATT: -0.0815  (SE: 0.0258 )"
+  },
+  {
+    "objectID": "application.html#results",
+    "href": "application.html#results",
+    "title": "Real-World Application",
+    "section": "Results",
+    "text": "Results\n\nresults &lt;- data.frame(\n  Method = c(\n    \"Naive DiD (no covariates)\",\n    \"Include occ (bad control)\",\n    \"Pre-treatment covariates only\",\n    \"Imputation (proposed)\",\n    \"DR/ML (proposed)\"\n  ),\n  ATT = c(att0$att, att1$att, att2$att, att3$att, att4$att),\n  SE = c(att0$se, att1$se, att2$se, att3$se, att4$se)\n)\nresults$CI_lower &lt;- results$ATT - 1.96 * results$SE\nresults$CI_upper &lt;- results$ATT + 1.96 * results$SE\n\nknitr::kable(\n  results,\n  digits = 4,\n  col.names = c(\"Method\", \"ATT\", \"SE\", \"CI Lower\", \"CI Upper\"),\n  caption = \"Wage scar estimates (log wage)\"\n)\n\n\nWage scar estimates (log wage)\n\n\nMethod\nATT\nSE\nCI Lower\nCI Upper\n\n\n\n\nNaive DiD (no covariates)\n-0.1130\n0.0331\n-0.1779\n-0.0481\n\n\nInclude occ (bad control)\n-0.1131\n0.0272\n-0.1663\n-0.0598\n\n\nPre-treatment covariates only\n-0.0900\n0.0265\n-0.1418\n-0.0381\n\n\nImputation (proposed)\n-0.0817\n0.0027\n-0.0869\n-0.0765\n\n\nDR/ML (proposed)\n-0.0815\n0.0258\n-0.1320\n-0.0310"
+  },
+  {
+    "objectID": "application.html#interpretation",
+    "href": "application.html#interpretation",
+    "title": "Real-World Application",
+    "section": "Interpretation",
+    "text": "Interpretation\n\n\n\n\n\n\nImportantThe bad control matters\n\n\n\nThe naive DiD and bad control approaches estimate a wage scar of about 11% (exp(-0.113) - 1). Our imputation and DR/ML methods estimate about 8%.\nThe 3 percentage point difference is the indirect effect of job loss operating through occupation downgrading. Conditioning on post-separation occupation masks this channel.\n\n\nThe total wage scar from job loss has two components:\n\nDirect effect (~8%): lower wages even within the same occupation\nIndirect effect (~3%): job loss pushes workers into lower-paying occupations\n\nStandard approaches that include occupation as a control only recover the direct effect. Our methods recover the total wage scar by imputing what occupation would have been without job loss."
+  },
+  {
+    "objectID": "application.html#data-access",
+    "href": "application.html#data-access",
+    "title": "Real-World Application",
+    "section": "Data access",
+    "text": "Data access\nThe nlsy_wagescars dataset is included in the badcontrols package:\nlibrary(badcontrols)\ndata(nlsy_wagescars)\nFor the full theoretical treatment, see Caetano, Callaway, Payne, and Sant’Anna (2024)."
   },
   {
     "objectID": "problem.html",
