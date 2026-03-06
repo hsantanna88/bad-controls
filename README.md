@@ -1,5 +1,12 @@
 # badcontrols
 
+<!-- badges: start -->
+[![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)](https://github.com/hsantanna88/bad-controls)
+[![R](https://img.shields.io/badge/R-%3E%3D%204.0-blue.svg)](https://cran.r-project.org/)
+[![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-green.svg)](https://www.gnu.org/licenses/gpl-3.0)
+[![Guide](https://img.shields.io/badge/guide-online-E05A47.svg)](https://hsantanna.org/bad-controls/)
+<!-- badges: end -->
+
 Difference-in-Differences with Bad Controls
 
 ## Overview
