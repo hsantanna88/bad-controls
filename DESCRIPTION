@@ -9,8 +9,7 @@ Authors@R: c(
     person("Stroud", "Payne", role = "aut",
            email = "stroud.payne@vanderbilt.edu"),
     person("Hugo", "Sant'Anna", role = c("aut", "cre"),
-           email = "hugo.santanna@uab.edu",
-           comment = c(ORCID = "0000-0003-3568-3600"))
+           email = "hsantanna@uab.edu")
     )
 Description: Implements methods for difference-in-differences when
     time-varying covariates are affected by treatment (bad controls).
@@ -23,17 +22,17 @@ BugReports: https://github.com/hsantanna88/bad-controls/issues
 License: GPL (>= 3)
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.3.2
+RoxygenNote: 7.3.3
 Depends:
     R (>= 4.1.0)
 Imports:
     pte,
-    DRDID,
-    BMisc (>= 1.4.7),
     dplyr,
     tidyr,
     stats
 Suggests:
+    DRDID,
+    BMisc (>= 1.4.7),
     grf (>= 2.0.0),
     fixest,
     ggplot2,
