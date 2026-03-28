@@ -196,57 +196,90 @@ imputation_attgt <- function(gt_data, xformla, d_covs_formula,
     cs[[paste0(bad_vars[i], "_imputed")]] <- stats::predict(imp_fit, newdata = cs)
   }
 
-  # Step 2: For treated, replace X_t with imputed X_t(0)
-  # For controls, keep observed X_t
+  # Step 2: Outcome regression among controls (Eq. 14 of the paper)
+  # DeltaY ~ (X_t, X_{t-1}, Z) with SEPARATE coefficients on X_t and X_{t-1}
+  # Uses OBSERVED X_t for controls; W is NOT in the outcome regression.
   X_imp_names <- paste0(bad_vars, "_imputed")
-  dX <- as.data.frame(matrix(NA, nrow = n, ncol = length(bad_vars)))
-  names(dX) <- paste0("d", bad_vars)
-
-  for (i in seq_along(bad_vars)) {
-    x_post_obs <- cs[[X_post_names[i]]]
-    x_post_imp <- cs[[X_imp_names[i]]]
-    x_pre <- cs[[X_pre_names[i]]]
-
-    # For treated: use imputed X_t(0); for controls: use observed X_t
-    x_post_use <- ifelse(D == 1, x_post_imp, x_post_obs)
-    dX[[paste0("d", bad_vars[i])]] <- x_post_use - x_pre
-  }
-
-  # Step 3: Run DiD regression with imputed covariates
-  # NOTE: W (= Y_pre) is used in Step 1 for imputing X_t(0) but is NOT included
-  # in the outcome regression. Including Y_pre here would create mechanical
-  # correlation since DeltaY = Y_post - Y_pre (Nickell-type bias).
-  covs <- cbind(dX)
-  if (ncol(Z_pre) > 0) covs <- cbind(covs, cs[, Z_names, drop = FALSE])
-
-  covmat <- as.matrix(covs)
   DeltaY <- cs$DeltaY
-
-  # Regression adjustment among controls
-  covmat_ctrl <- covmat[D == 0, , drop = FALSE]
-  n_ctrl <- sum(1 - D)
-
-  # Check rank
-  precheck <- qr(t(covmat_ctrl) %*% covmat_ctrl / n_ctrl)
-  keep <- precheck$pivot[1:precheck$rank]
-  covmat <- covmat[, keep, drop = FALSE]
-
-  reg_data <- data.frame(DeltaY = DeltaY[D == 0], covmat[D == 0, , drop = FALSE])
-  reg_fit <- stats::lm(DeltaY ~ ., data = reg_data)
-
-  # Predict counterfactual outcome change for treated
-  pred_data <- data.frame(covmat)
-  names(pred_data) <- names(reg_data)[-1]
-  mu_hat <- stats::predict(reg_fit, newdata = pred_data)
-
-  # ATT = mean(DeltaY - mu) for treated
-  att <- mean(DeltaY[D == 1] - mu_hat[D == 1])
-
-  # Influence function
   n1 <- sum(D)
+  n0 <- n - n1
+
+  or_rhs <- c(X_post_names, X_pre_names, Z_names)
+  or_fml <- stats::reformulate(or_rhs, response = "DeltaY")
+  or_fit <- stats::lm(or_fml, data = cs[control_idx, ])
+
+  # Step 3: Construct nu_hat for treated units (Eq. 17 of the paper)
+  # For treated: plug imputed m_X in place of observed X_t
+  nu_data <- cs[D == 1, or_rhs, drop = FALSE]
+  for (i in seq_along(bad_vars)) {
+    nu_data[[X_post_names[i]]] <- cs[[X_imp_names[i]]][D == 1]
+  }
+  nu_hat_treated <- stats::predict(or_fit, newdata = nu_data)
+
+  # Step 4: ATT = mean(DeltaY | D=1) - mean(nu_hat | D=1) (Eq. 18)
+  att <- mean(DeltaY[D == 1]) - mean(nu_hat_treated)
+
+  # --- Influence function (eq:psi-ra-final in the paper) ---
+  # The full IF has four components:
+  #   (a) treated outcome sampling: D/p * (DeltaY - E[DeltaY|D=1])
+  #   (b) treated imputation sampling: -D/p * (nu_0 - E[nu_0|D=1])
+  #   (c) outcome regression estimation: generated-regressors correction (beta)
+  #   (d) covariate evolution estimation: generated-regressors correction (pi)
+  #
+  # The old IF only had (a)+(b) for treated and a simple residual for controls,
+  # which underestimated the SE by ~60% because it missed the estimation
+  # uncertainty from beta-hat and pi-hat.
+  #
+  # Since D_i(1-D_i) = 0, treated units contribute (a)+(b) and
+  # untreated units contribute (c)+(d).
+
+  mu_hat_controls <- stats::fitted(or_fit)
+
+  # Residuals for untreated units
+  u_resid <- DeltaY[D == 0] - mu_hat_controls                     # outcome residual
+  imp_refit <- stats::lm(
+    stats::reformulate(rhs_names, response = X_post_names[1]),
+    data = cs[D == 0, ]
+  )
+  v_resid <- cs[[X_post_names[1]]][D == 0] - stats::fitted(imp_refit)  # first-stage residual
+
+  # Regressor matrices for untreated observations
+  R_ctrl <- as.matrix(cbind(1, cs[D == 0, or_rhs, drop = FALSE]))
+  S_ctrl <- as.matrix(cbind(1, cs[D == 0, rhs_names, drop = FALSE]))
+
+  # Sigma_beta^{-1} and Sigma_pi^{-1}
+  p_hat <- n1 / n
+  Sigma_beta_inv <- solve(crossprod(R_ctrl) / n0)
+  Sigma_pi_inv   <- solve(crossprod(S_ctrl) / n0)
+
+  # R_tilde for treated: replace X_post with imputed values
+  R_tilde_treat <- cs[D == 1, or_rhs, drop = FALSE]
+  for (i in seq_along(bad_vars)) {
+    R_tilde_treat[[X_post_names[i]]] <- cs[[X_imp_names[i]]][D == 1]
+  }
+  R_tilde_treat <- as.matrix(cbind(1, R_tilde_treat))
+  mean_R_tilde <- colMeans(R_tilde_treat)
+
+  # beta_1 coefficient (on X_post in outcome regression)
+  beta_coefs <- stats::coef(or_fit)
+  beta_1 <- beta_coefs[X_post_names]
+
+  # Mean of S over treated units (for the pi correction)
+  S_treat <- as.matrix(cbind(1, cs[D == 1, rhs_names, drop = FALSE]))
+  mean_S_treat <- colMeans(S_treat)
+
   inf_func <- rep(0, n)
-  inf_func[D == 1] <- (DeltaY[D == 1] - mu_hat[D == 1] - att)
-  inf_func[D == 0] <- -(n1 / n_ctrl) * (DeltaY[D == 0] - mu_hat[D == 0])
+
+  # Treated: components (a) + (b)
+  inf_func[D == 1] <- (1 / p_hat) * (
+    DeltaY[D == 1] - mean(DeltaY[D == 1]) -
+    nu_hat_treated + mean(nu_hat_treated)
+  )
+
+  # Untreated: components (c) + (d)
+  term_c <- as.numeric(R_ctrl %*% Sigma_beta_inv %*% mean_R_tilde) * u_resid
+  term_d <- beta_1[1] * as.numeric(S_ctrl %*% Sigma_pi_inv %*% mean_S_treat) * v_resid
+  inf_func[D == 0] <- -(1 / (1 - p_hat)) * (term_c + term_d)
 
   pte::attgt_if(attgt = att, inf_func = inf_func)
 }
