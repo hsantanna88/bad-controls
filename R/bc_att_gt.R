@@ -1,7 +1,7 @@
 #' @title Estimate ATT(g,t) with Bad Controls
 #'
 #' @description Main function for difference-in-differences with bad controls.
-#'   Wraps the \code{pte} infrastructure to handle time-varying covariates
+#'   Wraps the \code{ptetools} infrastructure to handle time-varying covariates
 #'   affected by treatment. Supports both imputation and doubly robust ML
 #'   estimation methods.
 #'
@@ -27,7 +27,7 @@
 #'   \code{"one"} (default, valid under Simple Covariate Unconfoundedness) or
 #'   \code{"classification"} (density ratio via classification)
 #' @param biters Number of bootstrap iterations (default 100)
-#' @param ... Additional arguments passed to \code{pte::pte2}
+#' @param ... Additional arguments passed to \code{ptetools::pte}
 #'
 #' @return A \code{pte_results} object containing:
 #' \describe{
@@ -116,14 +116,14 @@ bc_att_gt <- function(yname,
     }
   }
 
-  pte::pte2(
+  ptetools::pte(
     yname = yname,
     gname = gname,
     tname = tname,
     idname = idname,
     data = data,
-    setup_pte_fun = pte::setup_pte,
-    subset_fun = pte::two_by_two_subset,
+    setup_pte_fun = ptetools::setup_pte,
+    subset_fun = ptetools::two_by_two_subset,
     attgt_fun = attgt_fun,
     biters = biters,
     ...
@@ -133,7 +133,7 @@ bc_att_gt <- function(yname,
 
 #' Imputation ATT(g,t) estimator for bad controls
 #'
-#' @param gt_data data.frame from pte::two_by_two_subset
+#' @param gt_data data.frame from ptetools::two_by_two_subset
 #' @param xformla formula for Z covariates
 #' @param d_covs_formula formula for bad control variables
 #' @param lagged_outcome_cov logical; use lagged outcome as W
@@ -248,5 +248,5 @@ imputation_attgt <- function(gt_data, xformla, d_covs_formula,
   inf_func[D == 1] <- (DeltaY[D == 1] - mu_hat[D == 1] - att)
   inf_func[D == 0] <- -(n1 / n_ctrl) * (DeltaY[D == 0] - mu_hat[D == 0])
 
-  pte::attgt_if(attgt = att, inf_func = inf_func)
+  ptetools::attgt_if(attgt = att, inf_func = inf_func)
 }

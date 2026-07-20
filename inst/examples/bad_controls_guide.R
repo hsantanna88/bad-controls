@@ -14,7 +14,7 @@
 #' ============================================================================
 
 library(badcontrols)
-library(pte)
+library(ptetools)
 library(ggplot2)
 library(dplyr)
 
@@ -90,7 +90,7 @@ print(p1)
 
 # Method 0: Naive DiD (no covariates) -- biased
 cat("\n--- Method 0: Naive DiD (no covariates) ---\n")
-res_naive <- pte::pte_default(
+res_naive <- ptetools::pte_default(
   yname = "Y", gname = "G", tname = "period", idname = "id",
   data = sim_data, d_outcome = TRUE, est_method = "reg"
 )
@@ -99,7 +99,7 @@ cat("ATT:", round(att0$att, 4), "(SE:", round(att0$se, 4), ")\n")
 
 # Method 1: Include X_t directly (bad control) -- biased
 cat("\n--- Method 1: Include X_t (BAD CONTROL) ---\n")
-res_bad <- pte::pte_default(
+res_bad <- ptetools::pte_default(
   yname = "Y", gname = "G", tname = "period", idname = "id",
   data = sim_data, d_outcome = TRUE,
   d_covs_formula = ~X, est_method = "reg"
@@ -109,7 +109,7 @@ cat("ATT:", round(att1$att, 4), "(SE:", round(att1$se, 4), ")\n")
 
 # Method 2: Pre-treatment X only
 cat("\n--- Method 2: Pre-treatment X only ---\n")
-res_pretreat <- pte::pte_default(
+res_pretreat <- ptetools::pte_default(
   yname = "Y", gname = "G", tname = "period", idname = "id",
   data = sim_data, d_outcome = TRUE,
   xformla = ~Z, est_method = "reg"

@@ -57,19 +57,18 @@ variable W (default TRUE)}
 
 \item{biters}{Number of bootstrap iterations (default 100)}
 
-\item{...}{Additional arguments passed to \code{pte::pte_default}}
+\item{...}{Additional arguments passed to \code{ptetools::pte}}
 }
 \value{
-Object from \code{pte::pte_default} containing:
+A \code{pte_results} object containing:
 \describe{
-\item{overall_att or overall_results}{Overall ATT estimate and SE}
-\item{attgt_results}{Group-time specific ATT estimates}
-\item{event_study}{Event study estimates (if available)}
+\item{overall_att}{Overall ATT estimate and SE}
+\item{att_gt}{Group-time specific ATT estimates}
 }
 }
 \description{
 Main function for difference-in-differences with bad controls.
-Wraps the \code{pte} infrastructure to handle time-varying covariates
+Wraps the \code{ptetools} infrastructure to handle time-varying covariates
 affected by treatment. Supports both imputation and doubly robust ML
 estimation methods.
 }
@@ -83,7 +82,6 @@ Sant'Anna (2024). Two estimation approaches are available:
 \item For treated, predict counterfactual X_t(0)
 \item Run DiD using imputed X_t(0) instead of observed X_t
 }
-Requires the \code{fixest} package.
 
 \strong{Doubly Robust ML} (\code{est_method = "dr_ml"}):
 \enumerate{

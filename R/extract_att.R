@@ -1,11 +1,11 @@
-#' @title Extract ATT and SE from pte results
+#' @title Extract ATT and SE from ptetools results
 #'
 #' @description Helper to extract the overall ATT estimate and standard error
 #'   from either \code{pte_results} or \code{pte_emp_boot} objects returned
-#'   by \code{pte::pte_default}.
+#'   by \code{ptetools::pte_default}.
 #'
 #' @param res Result object from \code{\link{bc_att_gt}} or
-#'   \code{pte::pte_default}
+#'   \code{ptetools::pte_default}
 #'
 #' @return A list with components:
 #' \describe{

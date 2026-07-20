@@ -9,7 +9,8 @@ simulate_bad_controls(
   T_max = 4,
   direct_att = 0.2,
   x_effect_on_y = 1,
-  treatment_effect_on_x = 0.8
+  treatment_effect_on_x = 0.8,
+  w_confounding = 0.2
 )
 }
 \arguments{
@@ -22,6 +23,9 @@ simulate_bad_controls(
 \item{x_effect_on_y}{Effect of X on Y (beta coefficient, default 1.0)}
 
 \item{treatment_effect_on_x}{How much treatment shifts X (theta, default 0.8)}
+
+\item{w_confounding}{How much W confounds D and X_t(0) (default 0.2).
+Set to 0 for the simple case where (X_{t-1}, Z) alone suffice.}
 }
 \value{
 A list with:
@@ -37,24 +41,33 @@ The true ATT is known, making this useful for testing estimators and
 understanding the bad controls problem.
 }
 \details{
-The DGP creates a clear bad control problem with three causal channels:
+The DGP creates a clear bad control problem. The causal structure is:
 \itemize{
 \item D -> Y: direct treatment effect (\code{direct_att})
 \item D -> X_t -> Y: indirect effect through bad control (beta * theta)
-\item W -> D and W -> X_t: confounding requiring auxiliary variables
+\item W -> D and W -> X_t(0): W is a pre-treatment confounder
 }
 
+The auxiliary variable W is the lagged outcome at period 1: W = Y_1. This
+captures unobserved heterogeneity U_i that drives both treatment selection
+and covariate evolution.
+
 The true total ATT = \code{direct_att} + \code{x_effect_on_y} *
-\code{treatment_effect_on_x}. The DGP satisfies:
+\code{treatment_effect_on_x}. This is constant across all event times.
+
+The DGP satisfies:
 \itemize{
-\item Conditional parallel trends given (X_t, X(t-1), Z)
-\item Unconditional parallel trends FAILS (heterogeneous X trends)
-\item Simple Covariate Unconfoundedness: X_t(0) indep D | X(t-1), Z
+\item Conditional parallel trends given (X_t(0), Z)
+\item Unconditional parallel trends FAILS
+\item Covariate Unconfoundedness: X_t(0) indep D | X(t-1), W, Z
 }
 }
 \examples{
 sim <- simulate_bad_controls(n = 500, T_max = 4)
 head(sim$data)
 cat("True ATT:", sim$true_att, "\n")
+
+# Simple case: no W confounding
+sim0 <- simulate_bad_controls(n = 500, w_confounding = 0)
 
 }

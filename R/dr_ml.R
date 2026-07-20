@@ -23,7 +23,7 @@
 #'  specified. Cross-fitting ensures valid inference with ML first-stage
 #'  estimation.
 #'
-#' @param gt_data data.frame from \code{pte::two_by_two_subset} with columns
+#' @param gt_data data.frame from \code{ptetools::two_by_two_subset} with columns
 #'   id, D, period, name (pre/post), Y, plus bad control variables
 #' @param xformla one-sided formula for Z (time-invariant covariates).
 #'   May include W if it is observed in the data.
@@ -183,7 +183,7 @@ dr_ml_attgt <- function(gt_data,
     bad_control_vars = bad_vars, n_folds = n_folds
   )
 
-  pte::attgt_if(attgt = att_dr, inf_func = inf_func,
+  ptetools::attgt_if(attgt = att_dr, inf_func = inf_func,
                 extra_gt_returns = extra_returns)
 }
 

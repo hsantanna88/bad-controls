@@ -16,10 +16,11 @@ dr_ml_attgt(
 )
 }
 \arguments{
-\item{gt_data}{data.frame from \code{pte::two_by_two_subset} with columns
+\item{gt_data}{data.frame from \code{ptetools::two_by_two_subset} with columns
 id, D, period, name (pre/post), Y, plus bad control variables}
 
-\item{xformla}{one-sided formula for Z (time-invariant covariates)}
+\item{xformla}{one-sided formula for Z (time-invariant covariates).
+May include W if it is observed in the data.}
 
 \item{d_covs_formula}{one-sided formula for X (bad control variables)}
 
@@ -30,9 +31,7 @@ auxiliary variable W}
 
 \item{trim_ps}{propensity score trimming threshold (default 0.01)}
 
-\item{alpha_method}{how to estimate alpha: \code{"one"} (set to 1,
-valid under Simple Covariate Unconfoundedness) or
-\code{"classification"} (density ratio via classification)}
+\item{alpha_method}{kept for backward compatibility (unused in current version)}
 
 \item{...}{additional arguments (unused)}
 }
@@ -46,16 +45,18 @@ and K-fold cross-fitting. Estimates ATT(g,t) in the presence of
 post-treatment covariates (bad controls).
 }
 \details{
-The estimator uses six nuisance functions estimated via random
+The estimator uses two nuisance functions estimated via random
 forests (\code{grf} package):
 \itemize{
-\item mu(X_t, X(t-1), Z): outcome regression among controls
-\item nu(X(t-1), W, Z): nested regression (integrating out X_t)
-\item e_1(X(t-1), Z): coarse propensity score
-\item e_2(X(t-1), W, Z): fine propensity score
-\item alpha(X_t, X(t-1), Z): change of measure density ratio
-\item p: marginal treatment probability
+\item m(X(t-1), W, Z): outcome regression E\link{DeltaY | X(t-1), W, Z, D=0}
+\item e(X(t-1), W, Z): generalized propensity score P(D=1 | X(t-1), W, Z)
 }
+
+Under Conditional Parallel Trends given (X_t(0), Z) and Covariate
+Unconfoundedness X_t(0) indep D | X(t-1), W, Z, the law of iterated
+expectations gives:
+E\link{DeltaY(0) | X(t-1), W, Z, D=1} = E\link{DeltaY | X(t-1), W, Z, D=0}
+so the standard AIPW-DiD applies with covariates (X(t-1), W, Z).
 
 The doubly robust score provides consistent estimation if either
 the outcome regression or the propensity score model is correctly

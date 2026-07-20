@@ -2,13 +2,13 @@
 % Please edit documentation in R/extract_att.R
 \name{extract_att}
 \alias{extract_att}
-\title{Extract ATT and SE from pte results}
+\title{Extract ATT and SE from ptetools results}
 \usage{
 extract_att(res)
 }
 \arguments{
 \item{res}{Result object from \code{\link{bc_att_gt}} or
-\code{pte::pte_default}}
+\code{ptetools::pte_default}}
 }
 \value{
 A list with components:
@@ -20,7 +20,7 @@ A list with components:
 \description{
 Helper to extract the overall ATT estimate and standard error
 from either \code{pte_results} or \code{pte_emp_boot} objects returned
-by \code{pte::pte_default}.
+by \code{ptetools::pte_default}.
 }
 \examples{
 \donttest{

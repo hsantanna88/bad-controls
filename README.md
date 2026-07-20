@@ -33,10 +33,10 @@ Based on [Caetano, Callaway, Payne, and Sant'Anna (2024)](https://arxiv.org/abs/
 devtools::install_github("hsantanna88/bad-controls")
 ```
 
-The package depends on [`pte`](https://github.com/bcallaway11/pte) for the panel treatment effects infrastructure:
+The package depends on [`ptetools`](https://github.com/bcallaway11/ptetools) for the panel treatment effects infrastructure:
 
 ```r
-devtools::install_github("bcallaway11/pte")
+devtools::install_github("bcallaway11/ptetools")
 ```
 
 ## Quick Start

@@ -1,0 +1,34 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "badcontrols: Difference-in-Differences with Bad Controls"
+version: 0.1.1
+date-released: 2026-07-20
+url: "https://github.com/hsantanna88/bad-controls"
+license: "GPL-3.0-or-later"
+authors:
+  - family-names: "Caetano"
+    given-names: "Carolina"
+    email: ccaetano@uga.edu
+  - family-names: "Callaway"
+    given-names: "Brantly"
+    email: brantly.callaway@uga.edu
+  - family-names: "Payne"
+    given-names: "Stroud"
+    email: stroud.payne@vanderbilt.edu
+  - family-names: "Sant'Anna"
+    given-names: "Hugo"
+    email: hsantanna@uab.edu
+preferred-citation:
+  type: article
+  title: "Difference-in-Differences with Bad Controls"
+  year: 2024
+  url: "https://arxiv.org/abs/2405.10557"
+  authors:
+    - family-names: "Caetano"
+      given-names: "Carolina"
+    - family-names: "Callaway"
+      given-names: "Brantly"
+    - family-names: "Payne"
+      given-names: "Stroud"
+    - family-names: "Sant'Anna"
+      given-names: "Hugo"
