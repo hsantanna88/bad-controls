@@ -119,7 +119,7 @@ cat("ATT:", round(att2$att, 4), "(SE:", round(att2$se, 4), ")\n")
 
 # Method 3: Imputation (our proposal)
 cat("\n--- Method 3: Imputation ---\n")
-res_impute <- bc_att_gt(
+res_impute <- didbc(
   yname = "Y", gname = "G", tname = "period", idname = "id",
   data = sim_data,
   bad_control_formula = ~X,
@@ -132,7 +132,7 @@ cat("ATT:", round(att3$att, 4), "(SE:", round(att3$se, 4), ")\n")
 # Method 4: Doubly Robust ML (our proposal)
 cat("\n--- Method 4: Doubly Robust ML ---\n")
 if (requireNamespace("grf", quietly = TRUE)) {
-  res_drml <- bc_att_gt(
+  res_drml <- didbc(
     yname = "Y", gname = "G", tname = "period", idname = "id",
     data = sim_data,
     bad_control_formula = ~X,

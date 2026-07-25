@@ -49,7 +49,7 @@ sim <- simulate_bad_controls(n = 2000, T_max = 4)
 cat("True ATT:", sim$true_att, "\n")  # ATT = 1.0
 
 # Imputation approach
-res <- bc_att_gt(
+res <- didbc(
   yname = "Y", gname = "G", tname = "period", idname = "id",
   data = sim$data,
   bad_control_formula = ~X,   # X is the bad control
@@ -59,7 +59,7 @@ res <- bc_att_gt(
 extract_att(res)
 
 # Doubly robust ML (requires grf package)
-res_ml <- bc_att_gt(
+res_ml <- didbc(
   yname = "Y", gname = "G", tname = "period", idname = "id",
   data = sim$data,
   bad_control_formula = ~X,

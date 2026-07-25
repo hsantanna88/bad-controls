@@ -4,7 +4,7 @@
 #'   from either \code{pte_results} or \code{pte_emp_boot} objects returned
 #'   by \code{ptetools::pte_default}.
 #'
-#' @param res Result object from \code{\link{bc_att_gt}} or
+#' @param res Result object from \code{\link{didbc}} or
 #'   \code{ptetools::pte_default}
 #'
 #' @return A list with components:
@@ -16,7 +16,7 @@
 #' @examples
 #' \donttest{
 #' sim <- simulate_bad_controls(n = 500)
-#' res <- bc_att_gt(
+#' res <- didbc(
 #'   yname = "Y", gname = "G", tname = "period", idname = "id",
 #'   data = sim$data, bad_control_formula = ~X, xformla = ~Z
 #' )

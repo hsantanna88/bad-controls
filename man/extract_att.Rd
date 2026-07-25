@@ -7,7 +7,7 @@
 extract_att(res)
 }
 \arguments{
-\item{res}{Result object from \code{\link{bc_att_gt}} or
+\item{res}{Result object from \code{\link{didbc}} or
 \code{ptetools::pte_default}}
 }
 \value{
@@ -25,7 +25,7 @@ by \code{ptetools::pte_default}.
 \examples{
 \donttest{
 sim <- simulate_bad_controls(n = 500)
-res <- bc_att_gt(
+res <- didbc(
   yname = "Y", gname = "G", tname = "period", idname = "id",
   data = sim$data, bad_control_formula = ~X, xformla = ~Z
 )

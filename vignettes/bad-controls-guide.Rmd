@@ -88,7 +88,7 @@ Two-step procedure:
 3. Run DiD using imputed $X_t(0)$
 
 ```{r imputation, eval=FALSE}
-res_imp <- bc_att_gt(
+res_imp <- didbc(
   yname = "Y", gname = "G", tname = "period", idname = "id",
   data = sim$data,
   bad_control_formula = ~X,
@@ -104,7 +104,7 @@ Semiparametric estimator combining outcome regression with propensity score
 weighting. Uses random forests (`grf`) with K-fold cross-fitting.
 
 ```{r drml, eval=FALSE}
-res_ml <- bc_att_gt(
+res_ml <- didbc(
   yname = "Y", gname = "G", tname = "period", idname = "id",
   data = sim$data,
   bad_control_formula = ~X,
