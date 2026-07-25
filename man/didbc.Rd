@@ -8,15 +8,23 @@ didbc(
   yname,
   gname,
   tname,
-  idname,
+  idname = NULL,
   data,
   bad_control_formula,
-  xformla = ~1,
+  xformula = ~1,
   est_method = c("imputation", "dr_ml"),
   lagged_outcome_cov = TRUE,
   n_folds = 5,
   trim_ps = 0.01,
   alpha_method = "one",
+  control_group = "notyettreated",
+  anticipation = 0,
+  base_period = "varying",
+  weightsname = NULL,
+  cband = TRUE,
+  alp = 0.05,
+  boot_type = "multiplier",
+  cl = 1,
   biters = 100,
   ...
 )
@@ -29,7 +37,8 @@ never-treated units and the period of first treatment for treated units.}
 
 \item{tname}{Name of the time period variable (string)}
 
-\item{idname}{Name of the unit identifier variable (string)}
+\item{idname}{Name of the unit identifier variable (string); default
+\code{NULL}, matching \code{ptetools::pte}}
 
 \item{data}{A balanced panel data.frame}
 
@@ -37,7 +46,7 @@ never-treated units and the period of first treatment for treated units.}
 variables (time-varying covariates affected by treatment).
 E.g., \code{~X} or \code{~occ_score + experience}.}
 
-\item{xformla}{One-sided formula for time-invariant covariates Z
+\item{xformula}{One-sided formula for time-invariant covariates Z
 (default \code{~1})}
 
 \item{est_method}{Estimation method: \code{"imputation"} (default) for
@@ -54,6 +63,31 @@ variable W (default TRUE)}
 \item{alpha_method}{How to estimate the density ratio alpha in DR/ML:
 \code{"one"} (default, valid under Simple Covariate Unconfoundedness) or
 \code{"classification"} (density ratio via classification)}
+
+\item{control_group}{Which units serve as controls: \code{"notyettreated"}
+(default) or \code{"nevertreated"}. Passed to
+\code{ptetools::two_by_two_subset}.}
+
+\item{anticipation}{Number of periods before treatment where it can
+already affect the outcome (default 0). Passed to
+\code{ptetools::two_by_two_subset}.}
+
+\item{base_period}{Which pre-period to compare each post-period to:
+\code{"varying"} (default) or \code{"universal"}. Passed to
+\code{ptetools::two_by_two_subset}.}
+
+\item{weightsname}{Name of a sampling-weights variable in \code{data}
+(default \code{NULL})}
+
+\item{cband}{Logical; compute a uniform confidence band instead of
+pointwise confidence intervals (default \code{TRUE})}
+
+\item{alp}{Significance level (default 0.05)}
+
+\item{boot_type}{\code{"multiplier"} (default) or \code{"empirical"}}
+
+\item{cl}{Number of clusters for parallel computing in the bootstrap
+(default 1)}
 
 \item{biters}{Number of bootstrap iterations (default 100)}
 
@@ -103,7 +137,7 @@ res_imp <- didbc(
   yname = "Y", gname = "G", tname = "period", idname = "id",
   data = sim$data,
   bad_control_formula = ~X,
-  xformla = ~Z,
+  xformula = ~Z,
   est_method = "imputation"
 )
 }

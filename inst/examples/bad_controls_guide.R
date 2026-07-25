@@ -112,7 +112,7 @@ cat("\n--- Method 2: Pre-treatment X only ---\n")
 res_pretreat <- ptetools::pte_default(
   yname = "Y", gname = "G", tname = "period", idname = "id",
   data = sim_data, d_outcome = TRUE,
-  xformla = ~Z, est_method = "reg"
+  xformula = ~Z, est_method = "reg"
 )
 att2 <- extract_att(res_pretreat)
 cat("ATT:", round(att2$att, 4), "(SE:", round(att2$se, 4), ")\n")
@@ -123,7 +123,7 @@ res_impute <- didbc(
   yname = "Y", gname = "G", tname = "period", idname = "id",
   data = sim_data,
   bad_control_formula = ~X,
-  xformla = ~Z,
+  xformula = ~Z,
   est_method = "imputation"
 )
 att3 <- extract_att(res_impute)
@@ -136,7 +136,7 @@ if (requireNamespace("grf", quietly = TRUE)) {
     yname = "Y", gname = "G", tname = "period", idname = "id",
     data = sim_data,
     bad_control_formula = ~X,
-    xformla = ~Z,
+    xformula = ~Z,
     est_method = "dr_ml"
   )
   att4 <- extract_att(res_drml)

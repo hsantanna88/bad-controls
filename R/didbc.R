@@ -9,12 +9,13 @@
 #' @param gname Name of the group variable (string). Should be 0 for
 #'   never-treated units and the period of first treatment for treated units.
 #' @param tname Name of the time period variable (string)
-#' @param idname Name of the unit identifier variable (string)
+#' @param idname Name of the unit identifier variable (string); default
+#'   \code{NULL}, matching \code{ptetools::pte}
 #' @param data A balanced panel data.frame
 #' @param bad_control_formula One-sided formula specifying the bad control
 #'   variables (time-varying covariates affected by treatment).
 #'   E.g., \code{~X} or \code{~occ_score + experience}.
-#' @param xformla One-sided formula for time-invariant covariates Z
+#' @param xformula One-sided formula for time-invariant covariates Z
 #'   (default \code{~1})
 #' @param est_method Estimation method: \code{"imputation"} (default) for
 #'   the two-step imputation approach, or \code{"dr_ml"} for the doubly
@@ -26,6 +27,23 @@
 #' @param alpha_method How to estimate the density ratio alpha in DR/ML:
 #'   \code{"one"} (default, valid under Simple Covariate Unconfoundedness) or
 #'   \code{"classification"} (density ratio via classification)
+#' @param control_group Which units serve as controls: \code{"notyettreated"}
+#'   (default) or \code{"nevertreated"}. Passed to
+#'   \code{ptetools::two_by_two_subset}.
+#' @param anticipation Number of periods before treatment where it can
+#'   already affect the outcome (default 0). Passed to
+#'   \code{ptetools::two_by_two_subset}.
+#' @param base_period Which pre-period to compare each post-period to:
+#'   \code{"varying"} (default) or \code{"universal"}. Passed to
+#'   \code{ptetools::two_by_two_subset}.
+#' @param weightsname Name of a sampling-weights variable in \code{data}
+#'   (default \code{NULL})
+#' @param cband Logical; compute a uniform confidence band instead of
+#'   pointwise confidence intervals (default \code{TRUE})
+#' @param alp Significance level (default 0.05)
+#' @param boot_type \code{"multiplier"} (default) or \code{"empirical"}
+#' @param cl Number of clusters for parallel computing in the bootstrap
+#'   (default 1)
 #' @param biters Number of bootstrap iterations (default 100)
 #' @param ... Additional arguments passed to \code{ptetools::pte}
 #'
@@ -66,7 +84,7 @@
 #'   yname = "Y", gname = "G", tname = "period", idname = "id",
 #'   data = sim$data,
 #'   bad_control_formula = ~X,
-#'   xformla = ~Z,
+#'   xformula = ~Z,
 #'   est_method = "imputation"
 #' )
 #' }
@@ -77,19 +95,27 @@
 #'
 #' @export
 didbc <- function(yname,
-                      gname,
-                      tname,
-                      idname,
-                      data,
-                      bad_control_formula,
-                      xformla = ~1,
-                      est_method = c("imputation", "dr_ml"),
-                      lagged_outcome_cov = TRUE,
-                      n_folds = 5,
-                      trim_ps = 0.01,
-                      alpha_method = "one",
-                      biters = 100,
-                      ...) {
+                  gname,
+                  tname,
+                  idname = NULL,
+                  data,
+                  bad_control_formula,
+                  xformula = ~1,
+                  est_method = c("imputation", "dr_ml"),
+                  lagged_outcome_cov = TRUE,
+                  n_folds = 5,
+                  trim_ps = 0.01,
+                  alpha_method = "one",
+                  control_group = "notyettreated",
+                  anticipation = 0,
+                  base_period = "varying",
+                  weightsname = NULL,
+                  cband = TRUE,
+                  alp = 0.05,
+                  boot_type = "multiplier",
+                  cl = 1,
+                  biters = 100,
+                  ...) {
 
   est_method <- match.arg(est_method)
 
@@ -97,7 +123,7 @@ didbc <- function(yname,
     attgt_fun <- function(gt_data, ...) {
       dr_ml_attgt(
         gt_data = gt_data,
-        xformla = xformla,
+        xformla = xformula,
         d_covs_formula = bad_control_formula,
         lagged_outcome_cov = lagged_outcome_cov,
         n_folds = n_folds,
@@ -109,7 +135,7 @@ didbc <- function(yname,
     attgt_fun <- function(gt_data, ...) {
       imputation_attgt(
         gt_data = gt_data,
-        xformla = xformla,
+        xformla = xformula,
         d_covs_formula = bad_control_formula,
         lagged_outcome_cov = lagged_outcome_cov
       )
@@ -125,6 +151,14 @@ didbc <- function(yname,
     setup_pte_fun = ptetools::setup_pte,
     subset_fun = ptetools::two_by_two_subset,
     attgt_fun = attgt_fun,
+    control_group = control_group,
+    anticipation = anticipation,
+    base_period = base_period,
+    weightsname = weightsname,
+    cband = cband,
+    alp = alp,
+    boot_type = boot_type,
+    cl = cl,
     biters = biters,
     ...
   )

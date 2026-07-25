@@ -53,7 +53,7 @@ res <- didbc(
   yname = "Y", gname = "G", tname = "period", idname = "id",
   data = sim$data,
   bad_control_formula = ~X,   # X is the bad control
-  xformla = ~Z,                # Z is time-invariant (safe)
+  xformula = ~Z,                # Z is time-invariant (safe)
   est_method = "imputation"
 )
 extract_att(res)
@@ -63,7 +63,7 @@ res_ml <- didbc(
   yname = "Y", gname = "G", tname = "period", idname = "id",
   data = sim$data,
   bad_control_formula = ~X,
-  xformla = ~Z,
+  xformula = ~Z,
   est_method = "dr_ml"
 )
 extract_att(res_ml)

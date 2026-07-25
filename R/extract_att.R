@@ -18,7 +18,7 @@
 #' sim <- simulate_bad_controls(n = 500)
 #' res <- didbc(
 #'   yname = "Y", gname = "G", tname = "period", idname = "id",
-#'   data = sim$data, bad_control_formula = ~X, xformla = ~Z
+#'   data = sim$data, bad_control_formula = ~X, xformula = ~Z
 #' )
 #' extract_att(res)
 #' }

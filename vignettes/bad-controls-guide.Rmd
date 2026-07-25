@@ -92,7 +92,7 @@ res_imp <- didbc(
   yname = "Y", gname = "G", tname = "period", idname = "id",
   data = sim$data,
   bad_control_formula = ~X,
-  xformla = ~Z,
+  xformula = ~Z,
   est_method = "imputation"
 )
 extract_att(res_imp)
@@ -108,7 +108,7 @@ res_ml <- didbc(
   yname = "Y", gname = "G", tname = "period", idname = "id",
   data = sim$data,
   bad_control_formula = ~X,
-  xformla = ~Z,
+  xformula = ~Z,
   est_method = "dr_ml"
 )
 extract_att(res_ml)

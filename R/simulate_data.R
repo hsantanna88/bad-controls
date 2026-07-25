@@ -1,0 +1,198 @@
+# =============================================================================
+# Title: Simulate panel data with bad controls
+# Description: Generates staggered DiD panel data matching the Monte Carlo
+#   designs (DGP 1/2/3 and the stress test) in Caetano, Callaway, Payne, and
+#   Sant'Anna (2024), with known group-time, event-study, and overall ATT.
+# Author: Brant Callaway
+# Last update: 2026-07-25
+# Date created: 2026-07-25
+# =============================================================================
+
+#' @title Simulate Panel Data with Bad Controls
+#'
+#' @description Generates a staggered difference-in-differences panel
+#'   dataset matching the Monte Carlo designs in Caetano, Callaway, Payne,
+#'   and Sant'Anna (2024), where a time-varying covariate X is affected by
+#'   treatment (a bad control). Returns the known group-time, event-study,
+#'   and overall ATT alongside the data for testing estimators against.
+#'
+#' @param n Number of units (default 2000)
+#' @param T_max Number of time periods (default 4)
+#' @param groups Integer vector of possible treatment-adoption periods,
+#'   besides never-treated (default \code{2:T_max}). Values must be between
+#'   2 and \code{T_max}, since every unit needs at least one pre-period.
+#' @param dgp Which counterfactual evolution equation for X_t(0) to use:
+#'   \code{"dgp1"} (linear W), \code{"dgp2"} (nonlinear W), \code{"dgp3"}
+#'   (nonlinear in (X(t-1), Z), no W -- Simple Covariate Unconfoundedness
+#'   holds), or \code{"stress"} (severe nonlinearity in W)
+#' @param lambda How much treatment shifts X at event time 0 (default 0.5)
+#' @param delta Direct effect of treatment on Y at event time 0, net of the
+#'   effect transmitted through X (default 0.5)
+#' @param kappa Growth rate of the treatment effect with event time
+#'   \code{e = t - g}; effects at event time e are \code{(1 + kappa * e)}
+#'   times their event-time-0 value (default 0.5)
+#' @param beta_drift Drift rate of the loading on X(0) in the outcome
+#'   equation across calendar time (default 0.2); see Details. Set to 0 to
+#'   hold the loading fixed at 1 in every period.
+#'
+#' @return A list with:
+#' \describe{
+#'   \item{data}{Panel data.frame with columns id, period, G, D, Y, X, Z, W}
+#'   \item{true_att_gt}{data.frame(g, t, att): the true ATT(g,t) for every
+#'     valid group-time cell, computed exactly from the DGP parameters}
+#'   \item{true_att_by_e}{data.frame(e, att): the true event-study ATT at
+#'     each realized event time, averaged over the (g,t) cells that share
+#'     that event time in this sample}
+#'   \item{true_att_overall}{Realized sample average of the true individual
+#'     effect across every treated (i,t) observation in this sample}
+#' }
+#'
+#' @details
+#' Common structure (shared across all \code{dgp} choices): \eqn{Z_i,\eta_i
+#' \sim N(0,1)} and \eqn{W_i = 0.8\eta_i + 0.3Z_i + 0.2\varepsilon^W_i} are
+#' time-invariant unit characteristics; \eqn{\eta_i} is unobserved.
+#' Treatment group is assigned by splitting units into equal-sized bins of
+#' the latent index \eqn{0.2Z_i + 0.4W_i + 0.3\eta_i + \varepsilon^D_i},
+#' with the lowest bin never-treated and successive bins assigned to
+#' \code{groups} in increasing order.
+#'
+#' \eqn{X_{i1} = 0.5\eta_i + 0.4Z_i + 0.3\varepsilon^{X_1}_i}, and for
+#' \eqn{t \ge 2}, \eqn{X_{it}(0)} evolves according to the
+#' \code{dgp}-specific equation (redrawing fresh noise every period):
+#' \itemize{
+#'   \item dgp1: \eqn{0.7 X_{i,t-1}(0) + 0.3Z_i + 0.2W_i + 0.15}
+#'   \item dgp2: dgp1's equation plus \eqn{0.15 W_i^2}
+#'   \item dgp3: \eqn{0.7 X_{i,t-1}(0) + 0.3Z_i + 0.4 X_{i,t-1}(0) Z_i +
+#'     0.2 X_{i,t-1}(0)^2 + 0.15} (no W)
+#'   \item stress: dgp2's equation plus \eqn{0.25 X_{i,t-1}(0) W_i}
+#' }
+#' each plus \eqn{0.3\varepsilon^{X_t}_i}.
+#'
+#' The untreated outcome is \eqn{Y_{it}(0) = 0.3t + 0.5\eta_i + 0.3Z_i +
+#' \beta_t X_{it}(0) + 0.3\varepsilon^Y_{it}}, with a time-varying loading
+#' \eqn{\beta_t = 1 + \code{beta\_drift}(t-2)} (equal to 1 at t=2 regardless
+#' of \code{beta_drift}). Once treated (period \eqn{t \ge G_i}, event time
+#' \eqn{e = t - G_i}), the observed covariate and outcome are
+#' \eqn{X_{it} = X_{it}(0) + \lambda_e} and \eqn{Y_{it} = Y_{it}(0) + \beta_t
+#' \lambda_e + \delta_e}, where \eqn{\lambda_e = \lambda(1+\kappa e)} and
+#' \eqn{\delta_e = \delta(1+\kappa e)}. The \eqn{\beta_t \lambda_e} term
+#' routes the treatment's effect on X through the (time-varying) X-Y
+#' relationship, giving true \eqn{\ATT(g,t) = \beta_t \lambda_e + \delta_e}.
+#'
+#' The true \eqn{\ATT(g,t)} only ever depends on \eqn{\beta_t} at the
+#' post-treatment period \eqn{t}, which equals 1 whenever \eqn{t=2}
+#' regardless of \code{beta_drift} -- so with the defaults, \code{T_max = 2,
+#' groups = 2} already gives true \eqn{\ATT = \delta+\lambda = 1.00}. But
+#' \code{beta_drift != 0} still makes \eqn{\beta_1 \ne \beta_2}, so an
+#' estimator that assumes a constant X-Y loading across periods (as linear
+#' Imputation implicitly does) will show bias in that case even though the
+#' true ATT value matches the paper. To reproduce the paper's two-period
+#' designs exactly, including the constant-loading assumption, set
+#' \code{beta_drift = 0} as well.
+#'
+#' @examples
+#' sim <- simulate_bad_controls(n = 500, dgp = "dgp1")
+#' head(sim$data)
+#' sim$true_att_gt
+#' sim$true_att_overall
+#'
+#' # Collapses exactly to the paper's two-period design
+#' sim2 <- simulate_bad_controls(n = 500, T_max = 2, groups = 2, dgp = "dgp1",
+#'                                beta_drift = 0)
+#' sim2$true_att_overall
+#'
+#' @export
+simulate_bad_controls <- function(n = 2000, T_max = 4, groups = 2:T_max,
+                                  dgp = c("dgp1", "dgp2", "dgp3", "stress"),
+                                  lambda = 0.5, delta = 0.5, kappa = 0.5,
+                                  beta_drift = 0.2) {
+
+  dgp <- match.arg(dgp)
+  groups <- sort(unique(groups))
+  if (any(groups < 2 | groups > T_max)) {
+    stop("`groups` must be between 2 and T_max, so every unit has a pre-period.")
+  }
+  ng <- length(groups)
+
+  # --- Time-invariant unit characteristics ------------------------------
+  Z <- stats::rnorm(n)
+  eta <- stats::rnorm(n)
+  W <- 0.8 * eta + 0.3 * Z + 0.2 * stats::rnorm(n)
+
+  # --- Staggered treatment-group assignment ------------------------------
+  # Split into (ng + 1) equal-sized bins of the selection index: the lowest
+  # bin is never-treated, successive bins get `groups` in increasing order.
+  treat_latent <- 0.2 * Z + 0.4 * W + 0.3 * eta + stats::rnorm(n)
+  qs <- stats::quantile(treat_latent, probs = seq(0, 1, length.out = ng + 2))
+  bin <- cut(treat_latent, breaks = qs, include.lowest = TRUE, labels = FALSE)
+  G <- c(0L, groups)[bin]
+
+  # --- X_t(0): baseline plus DGP-specific evolution, fresh noise each t --
+  X0 <- matrix(NA_real_, nrow = n, ncol = T_max)
+  X0[, 1] <- 0.5 * eta + 0.4 * Z + 0.3 * stats::rnorm(n)
+
+  evolve_x <- switch(dgp,
+    dgp1   = function(x_lag) 0.7 * x_lag + 0.3 * Z + 0.2 * W + 0.15,
+    dgp2   = function(x_lag) 0.7 * x_lag + 0.3 * Z + 0.2 * W + 0.15 * W^2 + 0.15,
+    dgp3   = function(x_lag) 0.7 * x_lag + 0.3 * Z + 0.4 * x_lag * Z + 0.2 * x_lag^2 + 0.15,
+    stress = function(x_lag) 0.7 * x_lag + 0.3 * Z + 0.2 * W + 0.3 * W^2 + 0.25 * x_lag * W + 0.15
+  )
+  for (t in 2:T_max) {
+    X0[, t] <- evolve_x(X0[, t - 1]) + 0.3 * stats::rnorm(n)
+  }
+
+  # --- Y_t(0): time-varying loading on X(0), fresh noise each t ----------
+  Y0 <- matrix(NA_real_, nrow = n, ncol = T_max)
+  beta_t <- 1 + beta_drift * ((1:T_max) - 2)
+  theta_t <- 0.3 * (1:T_max)
+  for (t in 1:T_max) {
+    Y0[, t] <- theta_t[t] + 0.5 * eta + 0.3 * Z + beta_t[t] * X0[, t] +
+      0.3 * stats::rnorm(n)
+  }
+
+  # --- Build panel with observed X, Y under dynamic treatment effects ----
+  panel <- expand.grid(id = 1:n, period = 1:T_max)
+  panel$Z <- Z[panel$id]
+  panel$W <- W[panel$id]
+  panel$G <- G[panel$id]
+  panel$D <- as.integer(panel$G > 0 & panel$period >= panel$G)
+  panel$e <- ifelse(panel$D == 1, panel$period - panel$G, NA_integer_)
+
+  lambda_e <- lambda * (1 + kappa * panel$e)
+  delta_e <- delta * (1 + kappa * panel$e)
+  beta_period <- beta_t[panel$period]
+
+  panel$X0 <- X0[cbind(panel$id, panel$period)]
+  panel$Y0 <- Y0[cbind(panel$id, panel$period)]
+  panel$X <- panel$X0 + ifelse(panel$D == 1, lambda_e, 0)
+  # The X-shift is routed through beta_t so that the beta_t drift genuinely
+  # affects observed outcomes, not just the untreated-outcome equation.
+  panel$true_tau <- ifelse(panel$D == 1, beta_period * lambda_e + delta_e, NA_real_)
+  panel$Y <- panel$Y0 + ifelse(panel$D == 1, panel$true_tau, 0)
+
+  data <- panel[, c("id", "period", "G", "D", "Y", "X", "Z", "W")]
+  data <- data[order(data$id, data$period), ]
+  rownames(data) <- NULL
+
+  # --- True ATT(g,t): closed form, no sampling variation -----------------
+  gt_grid <- do.call(rbind, lapply(groups, function(g) {
+    data.frame(g = g, t = g:T_max)
+  }))
+  gt_grid$e <- gt_grid$t - gt_grid$g
+  gt_grid$att <- beta_t[gt_grid$t] * (lambda * (1 + kappa * gt_grid$e)) +
+    delta * (1 + kappa * gt_grid$e)
+  true_att_gt <- gt_grid[, c("g", "t", "att")]
+
+  # --- True event-study and overall ATT: realized averages in this sample
+  treated_obs <- panel[panel$D == 1, ]
+  true_att_by_e <- stats::aggregate(true_tau ~ e, data = treated_obs, FUN = mean)
+  names(true_att_by_e) <- c("e", "att")
+  true_att_overall <- mean(treated_obs$true_tau)
+
+  list(
+    data = data,
+    true_att_gt = true_att_gt,
+    true_att_by_e = true_att_by_e,
+    true_att_overall = true_att_overall
+  )
+}

@@ -1,41 +1,27 @@
-test_that("simulate_bad_controls returns correct structure", {
-  sim <- simulate_bad_controls(n = 100, T_max = 4)
-
-  expect_type(sim, "list")
-  expect_named(sim, c("data", "true_att"))
-
-  # Check data dimensions
-  expect_equal(nrow(sim$data), 100 * 4)
-  expect_true(all(c("id", "period", "G", "D", "Y", "X", "Z", "W") %in%
-    names(sim$data)))
-
-  # Check true ATT computation
-  expect_equal(sim$true_att, 0.2 + 1.0 * 0.8)
-})
-
-test_that("simulate_bad_controls respects parameters", {
+test_that("T_max = 2, groups = 2, beta_drift = 0 collapses exactly to the paper's ATT", {
   sim <- simulate_bad_controls(
-    n = 50, T_max = 3,
-    direct_att = 0.5, x_effect_on_y = 2.0, treatment_effect_on_x = 0.3
+    n = 1000, T_max = 2, groups = 2, dgp = "dgp1", beta_drift = 0
   )
 
-  expect_equal(nrow(sim$data), 50 * 3)
-  expect_equal(sim$true_att, 0.5 + 2.0 * 0.3)
-  expect_equal(max(sim$data$period), 3)
+  expect_equal(nrow(sim$true_att_gt), 1)
+  expect_equal(sim$true_att_gt$g, 2)
+  expect_equal(sim$true_att_gt$t, 2)
+  expect_equal(sim$true_att_gt$att, 1.0)
+  expect_equal(sim$true_att_overall, 1.0)
 })
 
-test_that("simulate_bad_controls has correct treatment structure", {
-  set.seed(42)
-  sim <- simulate_bad_controls(n = 500, T_max = 4)
-  d <- sim$data
+test_that("true_att_gt matches closed-form ATT(g,t)", {
+  sim <- simulate_bad_controls(
+    n = 100, T_max = 4, groups = 2:4, dgp = "dgp1",
+    lambda = 0.5, delta = 0.5, kappa = 0.5, beta_drift = 0.2
+  )
 
-  # G should be 0, 3, or 4
-  expect_true(all(d$G %in% c(0L, 3L, 4L)))
+  beta_t <- function(t) 1 + 0.2 * (t - 2)
+  att_formula <- function(g, t) {
+    e <- t - g
+    beta_t(t) * (0.5 * (1 + 0.5 * e)) + 0.5 * (1 + 0.5 * e)
+  }
+  expected <- mapply(att_formula, sim$true_att_gt$g, sim$true_att_gt$t)
 
-  # D should be 0 before treatment and 1 after
-  expect_true(all(d$D[d$G == 0] == 0))
-  expect_true(all(d$D[d$G == 3 & d$period < 3] == 0))
-  expect_true(all(d$D[d$G == 3 & d$period >= 3] == 1))
-  expect_true(all(d$D[d$G == 4 & d$period < 4] == 0))
-  expect_true(all(d$D[d$G == 4 & d$period >= 4] == 1))
+  expect_equal(sim$true_att_gt$att, unname(expected), tolerance = 1e-10)
 })
