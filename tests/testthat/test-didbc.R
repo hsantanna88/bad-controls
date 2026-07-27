@@ -46,6 +46,24 @@ test_that("didbc imputation recovers true ATT with a binary bad control (DGP1)",
   expect_equal(res$overall_att$overall.att, sim$true_att_overall, tolerance = 0.1)
 })
 
+test_that("didbc imputation recovers true ATT with bad_control_formula = NULL (DGP1)", {
+  # No bad control at all reduces to plain covariate-adjusted DiD -- see
+  # dev/NOTES.md. DGP1 is specifically the case where excluding the bad
+  # control happens to still be nearly unbiased (matches the paper's own
+  # "Exclude BC" finding for this DGP), so this is a meaningful check, not
+  # just "doesn't error."
+  set.seed(1)
+  sim <- simulate_bad_controls(
+    n = 4000, T_max = 2, groups = 2, dgp = "dgp1", beta_drift = 0
+  )
+  res <- suppressWarnings(didbc(
+    yname = "Y", gname = "G", tname = "period", idname = "id",
+    data = sim$data, bad_control_formula = NULL, xformula = ~Z,
+    est_method = "imputation", biters = 0
+  ))
+  expect_equal(res$overall_att$overall.att, sim$true_att_overall, tolerance = 0.05)
+})
+
 test_that("didbc dr_ml recovers true ATT under DGP1 (linear W)", {
   set.seed(4)
   sim <- simulate_bad_controls(

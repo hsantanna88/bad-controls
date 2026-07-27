@@ -92,23 +92,36 @@ imputation_attgt <- function(gt_data,
 
   comparison_idx <- which(D == 0)
 
-  # bad_control_formula is validated (exactly one variable) by didbc()
-  # before this function is ever called.
-  bc_var <- all.vars(bad_control_formula)[1]
-
-  # bc_pre/bc_post correspond to X_{t*-1}/X_{t*} in the paper; bc_post_imp
-  # is the observed value for comparison units and the imputed
-  # counterfactual X_{t*}(0) for treated units.
-  wide_data$bc_pre <- pre_data[[bc_var]][match(wide_data$id, pre_data$id)]
-  wide_data$bc_post <- post_data[[bc_var]][match(wide_data$id, post_data$id)]
+  # bad_control_formula is validated (exactly one variable, if not NULL) by
+  # didbc() before this function is ever called. With no bad control at
+  # all, bc_pre/bc_post are set to a constant so the code below (which
+  # references them unconditionally) still runs -- see Step 1.
+  has_bc <- !is.null(bad_control_formula)
+  if (has_bc) {
+    bc_var <- all.vars(bad_control_formula)[1]
+    # bc_pre/bc_post correspond to X_{t*-1}/X_{t*} in the paper; bc_post_imp
+    # is the observed value for comparison units and the imputed
+    # counterfactual X_{t*}(0) for treated units.
+    wide_data$bc_pre <- pre_data[[bc_var]][match(wide_data$id, pre_data$id)]
+    wide_data$bc_post <- post_data[[bc_var]][match(wide_data$id, post_data$id)]
+  } else {
+    wide_data$bc_pre <- 1
+    wide_data$bc_post <- 1
+  }
 
   # Step 1: impute untreated potential covariate. Binary bad control: logit
   # (Lambda(S'gamma) in eq:ra-x-evol's generalization); continuous: OLS, as
-  # before. `type = "response"` is valid for both lm and glm predict/residual
-  # methods, so it is used unconditionally below rather than branching.
+  # before. With no bad control, bc_post is constant (see above), so an
+  # intercept-only fit reproduces it exactly (residuals identically 0),
+  # which zeroes out Step 1's contribution to the influence function further
+  # down without any extra branching there. `type = "response"` is valid
+  # for lm/glm predict/residual methods alike, so it is used unconditionally
+  # below rather than branching.
   imp_rhs <- c("bc_pre", bc_cov_names, bc_dcov_names, dx_names, x_names)
   imp_fml <- stats::reformulate(imp_rhs, response = "bc_post")
-  imp_fit <- if (bad_control_binary) {
+  imp_fit <- if (!has_bc) {
+    stats::lm(bc_post ~ 1, data = wide_data[comparison_idx, ])
+  } else if (bad_control_binary) {
     stats::glm(imp_fml, data = wide_data[comparison_idx, ], family = stats::binomial())
   } else {
     stats::lm(imp_fml, data = wide_data[comparison_idx, ])
@@ -120,7 +133,7 @@ imputation_attgt <- function(gt_data,
   )
 
   # Step 2: impute untreated potential outcomes
-  out_rhs <- c("bc_post_imp", "bc_pre", dx_names, x_names)
+  out_rhs <- c(if (has_bc) c("bc_post_imp", "bc_pre"), dx_names, x_names)
   out_fml <- stats::reformulate(out_rhs, response = "DeltaY")
   reg_fit <- stats::lm(out_fml, data = wide_data[comparison_idx, ])
   mu_hat <- stats::predict(reg_fit, newdata = wide_data)
@@ -158,9 +171,16 @@ imputation_attgt <- function(gt_data,
   # R-tilde_i and S_i evaluated at treated units: for treated rows
   # "bc_post_imp" already equals the fitted counterfactual E-hat[bc_post_i |
   # S_i], so the reg_fit design matrix evaluated there is exactly R-tilde.
+  # s_mat_treated uses imp_fit's own formula (not imp_fml directly) so it
+  # automatically stays the same shape as s_mat above, whether that's the
+  # real formula or the no-bad-control intercept-only one.
   r_mat_treated <- stats::model.matrix(out_fml, data = wide_data[D == 1, , drop = FALSE])
-  s_mat_treated <- stats::model.matrix(imp_fml, data = wide_data[D == 1, , drop = FALSE])
+  s_mat_treated <- stats::model.matrix(stats::formula(imp_fit), data = wide_data[D == 1, , drop = FALSE])
+  # NA (not a regressor in reg_fit) exactly when has_bc is FALSE; 0 there
+  # combines with Step 1's identically-0 residuals to zero out Step 1's
+  # whole contribution to the influence function, with no extra branching.
   beta1_hat <- stats::coef(reg_fit)["bc_post_imp"]
+  if (is.na(beta1_hat)) beta1_hat <- 0
 
   # LOGIT-SPECIFIC: the same w_i weight, now evaluated at treated units' own
   # S_i, enters here via the chain rule when linearizing Lambda(S'gamma) --

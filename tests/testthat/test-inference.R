@@ -54,6 +54,35 @@ test_that("didbc imputation gives roughly correct coverage under DGP1", {
   expect_lt(coverage, 0.99)
 })
 
+test_that("didbc imputation gives roughly correct coverage with bad_control_formula = NULL (DGP1)", {
+  testthat::skip_if_not(identical(Sys.getenv("BADCONTROLS_SLOW_TESTS"), "true"))
+
+  reps <- 200
+  n <- 500
+
+  one_rep <- function(r) {
+    sim <- simulate_bad_controls(
+      n = n, T_max = 2, groups = 2, dgp = "dgp1", beta_drift = 0
+    )
+    res <- suppressMessages(suppressWarnings(didbc(
+      yname = "Y", gname = "G", tname = "period", idname = "id",
+      data = sim$data, bad_control_formula = NULL, xformula = ~Z,
+      est_method = "imputation", bstrap = FALSE, cband = FALSE, biters = 0
+    )))
+    est <- res$overall_att$overall.att
+    se <- res$overall_att$overall.se
+    crit <- res$overall_att$crit.val.egt
+    (sim$true_att_overall >= est - crit * se) && (sim$true_att_overall <= est + crit * se)
+  }
+
+  covered <- run_reps(one_rep, reps)
+  coverage <- mean(covered)
+  cat("\nImputation bad_control_formula = NULL (DGP1) coverage over", reps, "reps:", coverage, "\n")
+
+  expect_gt(coverage, 0.85)
+  expect_lt(coverage, 0.99)
+})
+
 test_that("didbc imputation gives roughly correct coverage with a binary bad control (DGP1)", {
   testthat::skip_if_not(identical(Sys.getenv("BADCONTROLS_SLOW_TESTS"), "true"))
 
@@ -125,7 +154,7 @@ test_that("didbc dr_ml (parametric) gives roughly correct coverage under DGP1", 
   testthat::skip_if_not(identical(Sys.getenv("BADCONTROLS_SLOW_TESTS"), "true"))
 
   reps <- 200
-  n <- 500
+  n <- 2000
 
   one_rep <- function(r) {
     sim <- simulate_bad_controls(
