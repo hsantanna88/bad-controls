@@ -6,32 +6,47 @@
 \usage{
 dr_ml_attgt(
   gt_data,
-  xformla,
-  d_covs_formula,
-  lagged_outcome_cov = FALSE,
+  xformula = ~1,
+  bad_control_formula = NULL,
+  d_covs_formula = NULL,
+  bad_control_cov_formula = NULL,
+  bad_control_d_cov_formula = NULL,
   n_folds = 5,
   trim_ps = 0.01,
-  alpha_method = "one",
   ...
 )
 }
 \arguments{
-\item{gt_data}{data.frame from \code{ptetools::two_by_two_subset} with columns
-id, D, period, name (pre/post), Y, plus bad control variables}
+\item{gt_data}{data.frame from \code{ptetools::two_by_two_subset} with
+columns id, D, period, name (pre/post), Y, plus covariate columns}
 
-\item{xformla}{one-sided formula for Z (time-invariant covariates).
-May include W if it is observed in the data.}
+\item{xformula}{One-sided formula for general exogenous covariates,
+entered as their pre-treatment-period level (default \code{~1})}
 
-\item{d_covs_formula}{one-sided formula for X (bad control variables)}
+\item{bad_control_formula}{One-sided formula naming exactly one bad
+control variable. \code{NULL} (the default) means no bad control at
+all, in which case this reduces to a standard AIPW-DiD estimator.
+Multiple bad controls are not yet supported.}
 
-\item{lagged_outcome_cov}{logical; if TRUE, include Y(t-1) as
-auxiliary variable W}
+\item{d_covs_formula}{One-sided formula for general exogenous covariates,
+entered as their change (post minus pre) rather than a level. Used
+only in the outcome regression. Default \code{NULL} (unused).}
+
+\item{bad_control_cov_formula}{One-sided formula for auxiliary covariates
+(W in the paper) used to model the bad control's counterfactual
+evolution and the propensity score, entered as their pre-treatment
+level. Any variable name can be used, including the outcome itself
+(e.g. \code{~Y} reproduces the old "lagged outcome as W" behavior).
+Default \code{NULL} (unused, ignored if \code{bad_control_formula} is
+\code{NULL}).}
+
+\item{bad_control_d_cov_formula}{Like \code{bad_control_cov_formula}, but
+entered as a change; used only in the outcome regression, not the
+propensity score. Default \code{NULL} (unused).}
 
 \item{n_folds}{number of cross-fitting folds (default 5)}
 
 \item{trim_ps}{propensity score trimming threshold (default 0.01)}
-
-\item{alpha_method}{kept for backward compatibility (unused in current version)}
 
 \item{...}{additional arguments (unused)}
 }
@@ -57,6 +72,12 @@ Unconfoundedness X_t(0) indep D | X(t-1), W, Z, the law of iterated
 expectations gives:
 E\link{DeltaY(0) | X(t-1), W, Z, D=1} = E\link{DeltaY | X(t-1), W, Z, D=0}
 so the standard AIPW-DiD applies with covariates (X(t-1), W, Z).
+
+The propensity score model uses only pre-treatment-period information
+(X(t-1), W as a level, Z) -- the differenced covariates
+(\code{d_covs_formula}, \code{bad_control_d_cov_formula}) are used only
+in the outcome regression, not the propensity score, since they require
+post-treatment-period data to construct.
 
 The doubly robust score provides consistent estimation if either
 the outcome regression or the propensity score model is correctly

@@ -6,20 +6,37 @@
 \usage{
 imputation_attgt(
   gt_data,
-  xformla,
-  d_covs_formula,
-  lagged_outcome_cov = TRUE,
+  xformula = ~1,
+  bad_control_formula = NULL,
+  d_covs_formula = NULL,
+  bad_control_cov_formula = NULL,
+  bad_control_d_cov_formula = NULL,
   ...
 )
 }
 \arguments{
 \item{gt_data}{data.frame from ptetools::two_by_two_subset}
 
-\item{xformla}{formula for Z covariates}
+\item{xformula}{One-sided formula for general exogenous covariates,
+entered as their pre-treatment-period level (default \code{~1})}
 
-\item{d_covs_formula}{formula for bad control variables}
+\item{bad_control_formula}{One-sided formula naming exactly one bad
+control variable (a time-varying covariate affected by treatment).
+\code{NULL} (the default) means no bad control at all.}
 
-\item{lagged_outcome_cov}{logical; use lagged outcome as W}
+\item{d_covs_formula}{One-sided formula for general exogenous covariates,
+entered as their change (post minus pre) rather than a level. Default
+\code{NULL} (unused).}
+
+\item{bad_control_cov_formula}{One-sided formula for auxiliary covariates
+(W in the paper) used to model the bad control's counterfactual
+evolution, entered as their pre-treatment-period level. Any variable
+name can be used here, including the outcome itself (to reproduce the
+old "lagged outcome as W" behavior). Default \code{NULL} (unused).}
+
+\item{bad_control_d_cov_formula}{Like \code{bad_control_cov_formula}, but
+entered as a change (post minus pre) rather than a level. Default
+\code{NULL} (unused).}
 
 \item{...}{unused}
 }

@@ -12,21 +12,29 @@
 #' @param idname Name of the unit identifier variable (string); default
 #'   \code{NULL}, matching \code{ptetools::pte}
 #' @param data A balanced panel data.frame
-#' @param bad_control_formula One-sided formula specifying the bad control
-#'   variables (time-varying covariates affected by treatment).
-#'   E.g., \code{~X} or \code{~occ_score + experience}.
-#' @param xformula One-sided formula for time-invariant covariates Z
-#'   (default \code{~1})
+#' @param bad_control_formula One-sided formula naming exactly one bad
+#'   control variable (a time-varying covariate affected by treatment),
+#'   e.g. \code{~X}. \code{NULL} (the default) means no bad control at all,
+#'   in which case \code{didbc} reduces to plain DiD with covariates.
+#'   Multiple bad controls are not yet supported.
+#' @param xformula One-sided formula for general exogenous covariates,
+#'   entered as their pre-treatment-period level (default \code{~1})
+#' @param d_covs_formula One-sided formula for general exogenous covariates,
+#'   entered as their change (post minus pre) rather than a level. Default
+#'   \code{NULL} (unused).
+#' @param bad_control_cov_formula One-sided formula for auxiliary covariates
+#'   (W in the paper) used to model the bad control's counterfactual
+#'   evolution, entered as their pre-treatment-period level. Any variable
+#'   name can be used here, including the outcome itself (e.g.
+#'   \code{~Y} reproduces the old "lagged outcome as W" behavior). Default
+#'   \code{NULL} (unused, and ignored if \code{bad_control_formula} is
+#'   \code{NULL}).
+#' @param bad_control_d_cov_formula Like \code{bad_control_cov_formula}, but
+#'   entered as a change (post minus pre) rather than a level. Default
+#'   \code{NULL} (unused).
 #' @param est_method Estimation method: \code{"imputation"} (default) for
 #'   the two-step imputation approach, or \code{"dr_ml"} for the doubly
 #'   robust ML estimator.
-#' @param lagged_outcome_cov Logical; include lagged outcome as auxiliary
-#'   variable W (default TRUE)
-#' @param n_folds Number of cross-fitting folds for DR/ML (default 5)
-#' @param trim_ps Propensity score trimming threshold for DR/ML (default 0.01)
-#' @param alpha_method How to estimate the density ratio alpha in DR/ML:
-#'   \code{"one"} (default, valid under Simple Covariate Unconfoundedness) or
-#'   \code{"classification"} (density ratio via classification)
 #' @param control_group Which units serve as controls: \code{"notyettreated"}
 #'   (default) or \code{"nevertreated"}. Passed to
 #'   \code{ptetools::two_by_two_subset}.
@@ -42,9 +50,15 @@
 #'   pointwise confidence intervals (default \code{TRUE})
 #' @param alp Significance level (default 0.05)
 #' @param boot_type \code{"multiplier"} (default) or \code{"empirical"}
+#' @param bstrap Logical; whether to use the multiplier bootstrap
+#'   (\code{TRUE}, the default) or purely analytical standard errors
+#'   (\code{FALSE}) when the estimator returns an influence function.
+#'   \code{bstrap = FALSE} only supports pointwise confidence intervals.
 #' @param cl Number of clusters for parallel computing in the bootstrap
 #'   (default 1)
 #' @param biters Number of bootstrap iterations (default 100)
+#' @param nfolds Number of cross-fitting folds for DR/ML (default 5)
+#' @param trim_ps Propensity score trimming threshold for DR/ML (default 0.01)
 #' @param ... Additional arguments passed to \code{ptetools::pte}
 #'
 #' @return A \code{pte_results} object containing:
@@ -99,13 +113,12 @@ didbc <- function(yname,
                   tname,
                   idname = NULL,
                   data,
-                  bad_control_formula,
+                  bad_control_formula = NULL,
                   xformula = ~1,
+                  d_covs_formula = NULL,
+                  bad_control_cov_formula = NULL,
+                  bad_control_d_cov_formula = NULL,
                   est_method = c("imputation", "dr_ml"),
-                  lagged_outcome_cov = TRUE,
-                  n_folds = 5,
-                  trim_ps = 0.01,
-                  alpha_method = "one",
                   control_group = "notyettreated",
                   anticipation = 0,
                   base_period = "varying",
@@ -113,8 +126,11 @@ didbc <- function(yname,
                   cband = TRUE,
                   alp = 0.05,
                   boot_type = "multiplier",
+                  bstrap = TRUE,
                   cl = 1,
                   biters = 100,
+                  nfolds = 5,
+                  trim_ps = 0.01,
                   ...) {
 
   est_method <- match.arg(est_method)
@@ -123,21 +139,24 @@ didbc <- function(yname,
     attgt_fun <- function(gt_data, ...) {
       dr_ml_attgt(
         gt_data = gt_data,
-        xformla = xformula,
-        d_covs_formula = bad_control_formula,
-        lagged_outcome_cov = lagged_outcome_cov,
-        n_folds = n_folds,
-        trim_ps = trim_ps,
-        alpha_method = alpha_method
+        xformula = xformula,
+        bad_control_formula = bad_control_formula,
+        d_covs_formula = d_covs_formula,
+        bad_control_cov_formula = bad_control_cov_formula,
+        bad_control_d_cov_formula = bad_control_d_cov_formula,
+        n_folds = nfolds,
+        trim_ps = trim_ps
       )
     }
   } else {
     attgt_fun <- function(gt_data, ...) {
       imputation_attgt(
         gt_data = gt_data,
-        xformla = xformula,
-        d_covs_formula = bad_control_formula,
-        lagged_outcome_cov = lagged_outcome_cov
+        xformula = xformula,
+        bad_control_formula = bad_control_formula,
+        d_covs_formula = d_covs_formula,
+        bad_control_cov_formula = bad_control_cov_formula,
+        bad_control_d_cov_formula = bad_control_d_cov_formula
       )
     }
   }
@@ -158,6 +177,7 @@ didbc <- function(yname,
     cband = cband,
     alp = alp,
     boot_type = boot_type,
+    bstrap = bstrap,
     cl = cl,
     biters = biters,
     ...

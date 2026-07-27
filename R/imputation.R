@@ -1,119 +1,153 @@
 #' Imputation ATT(g,t) estimator for bad controls
 #'
 #' @param gt_data data.frame from ptetools::two_by_two_subset
-#' @param xformla formula for Z covariates
-#' @param d_covs_formula formula for bad control variables
-#' @param lagged_outcome_cov logical; use lagged outcome as W
+#' @param xformula One-sided formula for general exogenous covariates,
+#'   entered as their pre-treatment-period level (default \code{~1})
+#' @param bad_control_formula One-sided formula naming exactly one bad
+#'   control variable (a time-varying covariate affected by treatment).
+#'   \code{NULL} (the default) means no bad control at all.
+#' @param d_covs_formula One-sided formula for general exogenous covariates,
+#'   entered as their change (post minus pre) rather than a level. Default
+#'   \code{NULL} (unused).
+#' @param bad_control_cov_formula One-sided formula for auxiliary covariates
+#'   (W in the paper) used to model the bad control's counterfactual
+#'   evolution, entered as their pre-treatment-period level. Any variable
+#'   name can be used here, including the outcome itself (to reproduce the
+#'   old "lagged outcome as W" behavior). Default \code{NULL} (unused).
+#' @param bad_control_d_cov_formula Like \code{bad_control_cov_formula}, but
+#'   entered as a change (post minus pre) rather than a level. Default
+#'   \code{NULL} (unused).
 #' @param ... unused
 #' @keywords internal
-imputation_attgt <- function(gt_data, xformla, d_covs_formula,
-                             lagged_outcome_cov = TRUE, ...) {
+imputation_attgt <- function(gt_data,
+                             xformula = ~1,
+                             bad_control_formula = NULL,
+                             d_covs_formula = NULL,
+                             bad_control_cov_formula = NULL,
+                             bad_control_d_cov_formula = NULL,
+                             ...) {
 
-  # Separate pre and post
+  # Separate pre and post, pivot to wide (one row per unit, pre/post as
+  # separate columns)
   pre_data <- gt_data[gt_data$name == "pre", ]
   post_data <- gt_data[gt_data$name == "post", ]
 
-  # Pivot to cross-section
-  cs <- merge(
+  wide_data <- merge(
     pre_data[, c("id", "D", "Y")],
     post_data[, c("id", "Y")],
     by = "id", suffixes = c("_pre", "_post")
   )
-  cs$DeltaY <- cs$Y_post - cs$Y_pre
+  wide_data$DeltaY <- wide_data$Y_post - wide_data$Y_pre
+  D <- wide_data$D
+  n <- nrow(wide_data)
 
-  D <- cs$D
-  n <- nrow(cs)
+  # --- x: general exogenous covariates, entered as a pre-period level ---
+  if (is.null(xformula)) xformula <- ~1
+  x_pre <- stats::model.frame(xformula, data = pre_data)
+  x_names <- character(0)
+  if (ncol(x_pre) > 0) {
+    x_df <- cbind(data.frame(id = pre_data$id), x_pre)
+    wide_data <- merge(wide_data, x_df, by = "id")
+    x_names <- names(x_pre)
+  }
+  D <- wide_data$D # re-extract after merge
 
-  # Z covariates (time-invariant)
-  Z_pre <- model.frame(xformla, data = pre_data)
-  if (ncol(Z_pre) > 0) {
-    Z_df <- cbind(data.frame(id = pre_data$id), Z_pre)
-    cs <- merge(cs, Z_df, by = "id")
+  # --- general exogenous covariates entered as a change ---
+  dx_names <- character(0)
+  if (!is.null(d_covs_formula)) {
+    dcov_vars <- all.vars(d_covs_formula)
+    for (v in dcov_vars) {
+      wide_data[[paste0("d_", v)]] <- post_data[[v]][match(wide_data$id, post_data$id)] -
+        pre_data[[v]][match(wide_data$id, pre_data$id)]
+    }
+    dx_names <- paste0("d_", dcov_vars)
   }
 
-  # Bad control variables at pre and post
-  bad_vars <- all.vars(d_covs_formula)
-  for (v in bad_vars) {
-    cs[[paste0(v, "_pre")]] <- pre_data[[v]][match(cs$id, pre_data$id)]
-    cs[[paste0(v, "_post")]] <- post_data[[v]][match(cs$id, post_data$id)]
+  # --- bc_cov: auxiliary covariates for modeling the bad control, pre-period
+  # level (W in the paper) ---
+  bc_cov_names <- character(0)
+  if (!is.null(bad_control_cov_formula)) {
+    bc_cov_vars <- all.vars(bad_control_cov_formula)
+    for (v in bc_cov_vars) {
+      wide_data[[paste0("bc_cov_", v)]] <- pre_data[[v]][match(wide_data$id, pre_data$id)]
+    }
+    bc_cov_names <- paste0("bc_cov_", bc_cov_vars)
   }
 
-  # Auxiliary variable W
-  if (lagged_outcome_cov) {
-    cs$W <- cs$Y_pre
+  # --- bc_cov entered as a change instead of a level ---
+  bc_dcov_names <- character(0)
+  if (!is.null(bad_control_d_cov_formula)) {
+    bc_dcov_vars <- all.vars(bad_control_d_cov_formula)
+    for (v in bc_dcov_vars) {
+      wide_data[[paste0("bc_dcov_", v)]] <- post_data[[v]][match(wide_data$id, post_data$id)] -
+        pre_data[[v]][match(wide_data$id, pre_data$id)]
+    }
+    bc_dcov_names <- paste0("bc_dcov_", bc_dcov_vars)
   }
 
-  # Re-extract after merge
-  D <- cs$D
+  comparison_idx <- which(D == 0)
 
-  # Step 1: Among controls, learn X_t ~ f(X_{t-1}, W, Z)
-  X_post_names <- paste0(bad_vars, "_post")
-  X_pre_names <- paste0(bad_vars, "_pre")
-  Z_names <- if (ncol(Z_pre) > 0) names(Z_pre) else character(0)
-  W_names <- if (lagged_outcome_cov) "W" else character(0)
+  if (is.null(bad_control_formula)) {
+    # --- No bad control: plain DiD with covariates ---
+    rhs <- c(dx_names, x_names)
+    out_fml <- if (length(rhs) == 0) DeltaY ~ 1 else stats::reformulate(rhs, response = "DeltaY")
+    reg_fit <- stats::lm(out_fml, data = wide_data[comparison_idx, ])
+    mu_hat <- stats::predict(reg_fit, newdata = wide_data)
+  } else {
+    bc_vars <- all.vars(bad_control_formula)
+    if (length(bc_vars) != 1) {
+      stop(
+        "`bad_control_formula` must name exactly one variable; ",
+        "multiple bad controls are not yet supported."
+      )
+    }
+    bc_var <- bc_vars[1]
 
-  rhs_names <- c(X_pre_names, W_names, Z_names)
-  control_idx <- which(D == 0)
+    # bc_pre/bc_post correspond to X_{t*-1}/X_{t*} in the paper; bc_post_imp
+    # is the observed value for comparison units and the imputed
+    # counterfactual X_{t*}(0) for treated units.
+    wide_data$bc_pre <- pre_data[[bc_var]][match(wide_data$id, pre_data$id)]
+    wide_data$bc_post <- post_data[[bc_var]][match(wide_data$id, post_data$id)]
 
-  # Impute each bad control variable
-  for (i in seq_along(bad_vars)) {
-    xvar <- X_post_names[i]
-    imp_formula <- stats::reformulate(rhs_names, response = xvar)
-    imp_fit <- stats::lm(imp_formula, data = cs[control_idx, ])
-    cs[[paste0(bad_vars[i], "_imputed")]] <- stats::predict(imp_fit, newdata = cs)
+    # Warn (not error) if the bad control shows no real time variation among
+    # comparison units -- a constant "bad control" isn't really one, but the
+    # code can still handle it.
+    if (isTRUE(all.equal(wide_data$bc_pre[comparison_idx], wide_data$bc_post[comparison_idx]))) {
+      warning(
+        "`", bc_var, "` does not appear to vary over time among comparison ",
+        "units; it may not be a genuine bad control."
+      )
+    }
+
+    # Step 1: among comparison units, learn X_t(0) ~ X_{t-1} + W + Z
+    imp_rhs <- c("bc_pre", bc_cov_names, bc_dcov_names, x_names)
+    imp_fml <- stats::reformulate(imp_rhs, response = "bc_post")
+    imp_fit <- stats::lm(imp_fml, data = wide_data[comparison_idx, ])
+    wide_data$bc_post_imp <- ifelse(
+      D == 1, stats::predict(imp_fit, newdata = wide_data), wide_data$bc_post
+    )
+
+    # Step 2: outcome regression with SEPARATE coefficients on X_t and
+    # X_{t-1} (not their difference -- forcing equal-and-opposite
+    # coefficients is a restriction the paper's model does not impose).
+    # NOTE: bc_cov/bc_dcov are used only in Step 1. Including them here
+    # would create mechanical correlation whenever they are (or are derived
+    # from) a lagged outcome, since DeltaY = Y_post - Y_pre.
+    out_rhs <- c("bc_post_imp", "bc_pre", dx_names, x_names)
+    out_fml <- stats::reformulate(out_rhs, response = "DeltaY")
+    reg_fit <- stats::lm(out_fml, data = wide_data[comparison_idx, ])
+    mu_hat <- stats::predict(reg_fit, newdata = wide_data)
   }
-
-  # Step 2: For treated, replace X_t with imputed X_t(0)
-  # For controls, keep observed X_t
-  X_imp_names <- paste0(bad_vars, "_imputed")
-  dX <- as.data.frame(matrix(NA, nrow = n, ncol = length(bad_vars)))
-  names(dX) <- paste0("d", bad_vars)
-
-  for (i in seq_along(bad_vars)) {
-    x_post_obs <- cs[[X_post_names[i]]]
-    x_post_imp <- cs[[X_imp_names[i]]]
-    x_pre <- cs[[X_pre_names[i]]]
-
-    # For treated: use imputed X_t(0); for controls: use observed X_t
-    x_post_use <- ifelse(D == 1, x_post_imp, x_post_obs)
-    dX[[paste0("d", bad_vars[i])]] <- x_post_use - x_pre
-  }
-
-  # Step 3: Run DiD regression with imputed covariates
-  # NOTE: W (= Y_pre) is used in Step 1 for imputing X_t(0) but is NOT included
-  # in the outcome regression. Including Y_pre here would create mechanical
-  # correlation since DeltaY = Y_post - Y_pre (Nickell-type bias).
-  covs <- cbind(dX)
-  if (ncol(Z_pre) > 0) covs <- cbind(covs, cs[, Z_names, drop = FALSE])
-
-  covmat <- as.matrix(covs)
-  DeltaY <- cs$DeltaY
-
-  # Regression adjustment among controls
-  covmat_ctrl <- covmat[D == 0, , drop = FALSE]
-  n_ctrl <- sum(1 - D)
-
-  # Check rank
-  precheck <- qr(t(covmat_ctrl) %*% covmat_ctrl / n_ctrl)
-  keep <- precheck$pivot[1:precheck$rank]
-  covmat <- covmat[, keep, drop = FALSE]
-
-  reg_data <- data.frame(DeltaY = DeltaY[D == 0], covmat[D == 0, , drop = FALSE])
-  reg_fit <- stats::lm(DeltaY ~ ., data = reg_data)
-
-  # Predict counterfactual outcome change for treated
-  pred_data <- data.frame(covmat)
-  names(pred_data) <- names(reg_data)[-1]
-  mu_hat <- stats::predict(reg_fit, newdata = pred_data)
 
   # ATT = mean(DeltaY - mu) for treated
-  att <- mean(DeltaY[D == 1] - mu_hat[D == 1])
+  att <- mean(wide_data$DeltaY[D == 1] - mu_hat[D == 1])
 
   # Influence function
   n1 <- sum(D)
+  n0 <- n - n1
   inf_func <- rep(0, n)
-  inf_func[D == 1] <- (DeltaY[D == 1] - mu_hat[D == 1] - att)
-  inf_func[D == 0] <- -(n1 / n_ctrl) * (DeltaY[D == 0] - mu_hat[D == 0])
+  inf_func[D == 1] <- (wide_data$DeltaY[D == 1] - mu_hat[D == 1] - att)
+  inf_func[D == 0] <- -(n1 / n0) * (wide_data$DeltaY[D == 0] - mu_hat[D == 0])
 
   ptetools::attgt_if(attgt = att, inf_func = inf_func)
 }

@@ -1,6 +1,7 @@
 # These tests check that didbc() recovers the known true ATT from
 # simulate_bad_controls() under every (dgp, est_method) combination the
-# paper's theory says *should* be consistent:
+# paper's theory says should be consistent, now that W is fully opt-in via
+# bad_control_cov_formula (there is no more automatic lagged-outcome proxy):
 #   - Imputation is only tested under DGP1 (linear W), since the paper's own
 #     results say the linear working model is misspecified under DGP2
 #     (nonlinear W) and DGP3 (nonlinear X(t-1)/Z), so Imputation is not
@@ -8,17 +9,10 @@
 #   - DR/ML is tested under all three DGPs, since it's meant to adapt
 #     nonparametrically regardless of which relationship is nonlinear (or
 #     whether W is needed at all, as in DGP3 where SCU holds).
+#   - DGP1 and DGP2 need bad_control_cov_formula = ~W (the real confounder);
+#     DGP3 doesn't need W at all (SCU holds), so it's omitted there.
 #
-# Some of these are expected to fail right now, for reasons already
-# diagnosed:
-#   - imputation_attgt()/dr_ml_attgt() never actually use the real W column;
-#     w_formula is accepted but silently unused, and lagged_outcome_cov
-#     (which substitutes Y(t-1) for W) is the only real channel.
-#   - imputation_attgt() regresses on a single differenced dX = X_t - X_{t-1}
-#     rather than allowing separate coefficients on X_t and X_{t-1}, which
-#     biases it whenever those coefficients genuinely differ.
-# A failure here points directly at one of the fixes still needed, not at a
-# bad test.
+# See dev/NOTES.md for an open question on DGP3 + DR/ML.
 
 test_that("didbc imputation recovers true ATT under DGP1 (linear W)", {
   set.seed(1)
@@ -28,6 +22,7 @@ test_that("didbc imputation recovers true ATT under DGP1 (linear W)", {
   res <- suppressWarnings(didbc(
     yname = "Y", gname = "G", tname = "period", idname = "id",
     data = sim$data, bad_control_formula = ~X, xformula = ~Z,
+    bad_control_cov_formula = ~W,
     est_method = "imputation", biters = 0
   ))
   expect_equal(res$overall_att$overall.att, sim$true_att_overall, tolerance = 0.05)
@@ -41,7 +36,8 @@ test_that("didbc dr_ml recovers true ATT under DGP1 (linear W)", {
   res <- suppressWarnings(didbc(
     yname = "Y", gname = "G", tname = "period", idname = "id",
     data = sim$data, bad_control_formula = ~X, xformula = ~Z,
-    est_method = "dr_ml", n_folds = 3, biters = 0
+    bad_control_cov_formula = ~W,
+    est_method = "dr_ml", nfolds = 3, biters = 0
   ))
   expect_equal(res$overall_att$overall.att, sim$true_att_overall, tolerance = 0.1)
 })
@@ -54,7 +50,8 @@ test_that("didbc dr_ml recovers true ATT under DGP2 (nonlinear W)", {
   res <- suppressWarnings(didbc(
     yname = "Y", gname = "G", tname = "period", idname = "id",
     data = sim$data, bad_control_formula = ~X, xformula = ~Z,
-    est_method = "dr_ml", n_folds = 3, biters = 0
+    bad_control_cov_formula = ~W,
+    est_method = "dr_ml", nfolds = 3, biters = 0
   ))
   expect_equal(res$overall_att$overall.att, sim$true_att_overall, tolerance = 0.1)
 })
@@ -67,7 +64,7 @@ test_that("didbc dr_ml recovers true ATT under DGP3 (SCU holds, W not needed)", 
   res <- suppressWarnings(didbc(
     yname = "Y", gname = "G", tname = "period", idname = "id",
     data = sim$data, bad_control_formula = ~X, xformula = ~Z,
-    est_method = "dr_ml", n_folds = 3, biters = 0
+    est_method = "dr_ml", nfolds = 3, biters = 0
   ))
   expect_equal(res$overall_att$overall.att, sim$true_att_overall, tolerance = 0.1)
 })

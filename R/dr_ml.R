@@ -18,21 +18,40 @@
 #'    E[DeltaY(0) | X(t-1), W, Z, D=1] = E[DeltaY | X(t-1), W, Z, D=0]
 #'  so the standard AIPW-DiD applies with covariates (X(t-1), W, Z).
 #'
+#'  The propensity score model uses only pre-treatment-period information
+#'  (X(t-1), W as a level, Z) -- the differenced covariates
+#'  (\code{d_covs_formula}, \code{bad_control_d_cov_formula}) are used only
+#'  in the outcome regression, not the propensity score, since they require
+#'  post-treatment-period data to construct.
+#'
 #'  The doubly robust score provides consistent estimation if either
 #'  the outcome regression or the propensity score model is correctly
 #'  specified. Cross-fitting ensures valid inference with ML first-stage
 #'  estimation.
 #'
-#' @param gt_data data.frame from \code{ptetools::two_by_two_subset} with columns
-#'   id, D, period, name (pre/post), Y, plus bad control variables
-#' @param xformla one-sided formula for Z (time-invariant covariates).
-#'   May include W if it is observed in the data.
-#' @param d_covs_formula one-sided formula for X (bad control variables)
-#' @param lagged_outcome_cov logical; if TRUE, include Y(t-1) as
-#'   auxiliary variable W
+#' @param gt_data data.frame from \code{ptetools::two_by_two_subset} with
+#'   columns id, D, period, name (pre/post), Y, plus covariate columns
+#' @param xformula One-sided formula for general exogenous covariates,
+#'   entered as their pre-treatment-period level (default \code{~1})
+#' @param bad_control_formula One-sided formula naming exactly one bad
+#'   control variable. \code{NULL} (the default) means no bad control at
+#'   all, in which case this reduces to a standard AIPW-DiD estimator.
+#'   Multiple bad controls are not yet supported.
+#' @param d_covs_formula One-sided formula for general exogenous covariates,
+#'   entered as their change (post minus pre) rather than a level. Used
+#'   only in the outcome regression. Default \code{NULL} (unused).
+#' @param bad_control_cov_formula One-sided formula for auxiliary covariates
+#'   (W in the paper) used to model the bad control's counterfactual
+#'   evolution and the propensity score, entered as their pre-treatment
+#'   level. Any variable name can be used, including the outcome itself
+#'   (e.g. \code{~Y} reproduces the old "lagged outcome as W" behavior).
+#'   Default \code{NULL} (unused, ignored if \code{bad_control_formula} is
+#'   \code{NULL}).
+#' @param bad_control_d_cov_formula Like \code{bad_control_cov_formula}, but
+#'   entered as a change; used only in the outcome regression, not the
+#'   propensity score. Default \code{NULL} (unused).
 #' @param n_folds number of cross-fitting folds (default 5)
 #' @param trim_ps propensity score trimming threshold (default 0.01)
-#' @param alpha_method kept for backward compatibility (unused in current version)
 #' @param ... additional arguments (unused)
 #'
 #' @return \code{attgt_if} object with ATT estimate and influence function
@@ -46,12 +65,13 @@
 #'
 #' @export
 dr_ml_attgt <- function(gt_data,
-                        xformla,
-                        d_covs_formula,
-                        lagged_outcome_cov = FALSE,
+                        xformula = ~1,
+                        bad_control_formula = NULL,
+                        d_covs_formula = NULL,
+                        bad_control_cov_formula = NULL,
+                        bad_control_d_cov_formula = NULL,
                         n_folds = 5,
                         trim_ps = 0.01,
-                        alpha_method = "one",
                         ...) {
 
   if (!requireNamespace("grf", quietly = TRUE)) {
@@ -63,7 +83,7 @@ dr_ml_attgt <- function(gt_data,
   this.g <- unique(gt_data$G[gt_data$name == "post" & gt_data$D == 1])
   this.tp <- unique(gt_data$period[gt_data$name == "post"])
 
-  # STEP 0: Pivot panel to cross-section
+  # Pivot panel to cross-section
   pre_data <- gt_data[gt_data$name == "pre", ]
   post_data <- gt_data[gt_data$name == "post", ]
 
@@ -72,90 +92,129 @@ dr_ml_attgt <- function(gt_data,
     post_data[, c("id", "Y")],
     by = "id", suffixes = c("_pre", "_post")
   )
-
   cs$DeltaY <- cs$Y_post - cs$Y_pre
-
   D <- cs$D
-  n <- nrow(cs)
-  n1 <- sum(D)
-  p_hat <- n1 / n
 
-  # Z covariates (time-invariant, from pre-period)
-  Z_frame <- model.frame(xformla, data = pre_data)
+  # --- Z: general exogenous covariates, pre-period level ---
+  if (is.null(xformula)) xformula <- ~1
+  Z_frame <- stats::model.frame(xformula, data = pre_data)
   Z_names <- character(0)
   if (ncol(Z_frame) > 0) {
     Z_df <- cbind(data.frame(id = pre_data$id), Z_frame)
     cs <- merge(cs, Z_df, by = "id")
     Z_names <- names(Z_frame)
   }
+  D <- cs$D # re-extract after merge
 
-  # Bad controls X at pre and post periods
-  bad_vars <- all.vars(d_covs_formula)
-  for (v in bad_vars) {
-    cs[[paste0(v, "_pre")]] <- pre_data[[v]][match(cs$id, pre_data$id)]
-    cs[[paste0(v, "_post")]] <- post_data[[v]][match(cs$id, post_data$id)]
+  # --- general exogenous covariates entered as a change ---
+  dZ_names <- character(0)
+  if (!is.null(d_covs_formula)) {
+    dcov_vars <- all.vars(d_covs_formula)
+    for (v in dcov_vars) {
+      cs[[paste0("d_", v)]] <- post_data[[v]][match(cs$id, post_data$id)] -
+        pre_data[[v]][match(cs$id, pre_data$id)]
+    }
+    dZ_names <- paste0("d_", dcov_vars)
   }
 
-  X_pre_names <- paste0(bad_vars, "_pre")
-  X_post_names <- paste0(bad_vars, "_post")
-
+  # --- W: auxiliary covariates for modeling the bad control, pre-period level
   W_names <- character(0)
-  if (lagged_outcome_cov) W_names <- "Y_pre"
+  if (!is.null(bad_control_cov_formula)) {
+    w_vars <- all.vars(bad_control_cov_formula)
+    for (v in w_vars) {
+      cs[[paste0("w_", v)]] <- pre_data[[v]][match(cs$id, pre_data$id)]
+    }
+    W_names <- paste0("w_", w_vars)
+  }
 
-  # Re-extract after merge
-  D <- cs$D
+  # --- W entered as a change instead of a level ---
+  dW_names <- character(0)
+  if (!is.null(bad_control_d_cov_formula)) {
+    dw_vars <- all.vars(bad_control_d_cov_formula)
+    for (v in dw_vars) {
+      cs[[paste0("dw_", v)]] <- post_data[[v]][match(cs$id, post_data$id)] -
+        pre_data[[v]][match(cs$id, pre_data$id)]
+    }
+    dW_names <- paste0("dw_", dw_vars)
+  }
+
   n <- nrow(cs)
   n1 <- sum(D)
   n0 <- n - n1
   p_hat <- n1 / n
-
   DeltaY <- cs$DeltaY
   control_idx <- which(D == 0)
 
-  # STEP 1: Impute X_t(0) for treated (OLS, same as imputation estimator)
-  imp_rhs <- c(X_pre_names, W_names, Z_names)
-  for (i in seq_along(bad_vars)) {
-    imp_fml <- stats::reformulate(imp_rhs, response = X_post_names[i])
+  has_bc <- !is.null(bad_control_formula)
+  bc_var <- NULL
+
+  if (has_bc) {
+    bc_vars <- all.vars(bad_control_formula)
+    if (length(bc_vars) != 1) {
+      stop(
+        "`bad_control_formula` must name exactly one variable; ",
+        "multiple bad controls are not yet supported."
+      )
+    }
+    bc_var <- bc_vars[1]
+    cs$X_pre <- pre_data[[bc_var]][match(cs$id, pre_data$id)]
+    cs$X_post <- post_data[[bc_var]][match(cs$id, post_data$id)]
+
+    # Warn (not error) if the bad control shows no real time variation
+    # among controls -- a constant "bad control" isn't really one, but the
+    # code can still handle it.
+    if (isTRUE(all.equal(cs$X_pre[control_idx], cs$X_post[control_idx]))) {
+      warning(
+        "`", bc_var, "` does not appear to vary over time among untreated ",
+        "units; it may not be a genuine bad control."
+      )
+    }
+
+    # STEP 1: impute X_t(0) for treated (OLS, same as imputation estimator)
+    imp_rhs <- c("X_pre", W_names, dW_names, Z_names)
+    imp_fml <- stats::reformulate(imp_rhs, response = "X_post")
     imp_fit <- stats::lm(imp_fml, data = cs[control_idx, ])
-    imp_pred <- stats::predict(imp_fit, newdata = cs)
-    cs[[paste0(bad_vars[i], "_imp")]] <- ifelse(D == 1, imp_pred,
-                                                  cs[[X_post_names[i]]])
+    cs$X_post_imp <- ifelse(D == 1, stats::predict(imp_fit, newdata = cs), cs$X_post)
+
+    # STEP 2: outcome regression, SEPARATE coefficients on X_t and X_{t-1}
+    # (not their difference -- see imputation_attgt for why).
+    or_rhs <- c("X_post_imp", "X_pre", dZ_names, Z_names)
+  } else {
+    or_rhs <- c(dZ_names, Z_names)
   }
 
-  # STEP 2: Outcome regression via OLS using imputed X_t(0)
-  dX_names <- paste0("d", bad_vars)
-  for (i in seq_along(bad_vars)) {
-    cs[[dX_names[i]]] <- cs[[paste0(bad_vars[i], "_imp")]] - cs[[X_pre_names[i]]]
-  }
-
-  or_rhs <- c(dX_names, Z_names)
-  or_fml <- stats::reformulate(or_rhs, response = "DeltaY")
+  or_fml <- if (length(or_rhs) == 0) DeltaY ~ 1 else stats::reformulate(or_rhs, response = "DeltaY")
   or_fit <- stats::lm(or_fml, data = cs[control_idx, ])
   m_hat <- stats::predict(or_fit, newdata = cs)
 
-  # STEP 3: Propensity score via ML with cross-fitting
-  ps_feat_names <- c(X_pre_names, W_names, Z_names)
-  ps_features <- as.matrix(cs[, ps_feat_names, drop = FALSE])
+  # STEP 3: propensity score via ML with cross-fitting. Pre-treatment-period
+  # features only -- see Details.
+  ps_feat_names <- c(if (has_bc) c("X_pre", W_names), Z_names)
 
-  fold_ids <- rep(NA_integer_, n)
-  treated_idx <- which(D == 1)
-  fold_ids[treated_idx] <- sample(rep(1:n_folds, length.out = length(treated_idx)))
-  fold_ids[control_idx] <- sample(rep(1:n_folds, length.out = length(control_idx)))
+  if (length(ps_feat_names) == 0) {
+    e_hat <- rep(p_hat, n)
+  } else {
+    ps_features <- as.matrix(cs[, ps_feat_names, drop = FALSE])
 
-  e_hat <- rep(NA_real_, n)
+    fold_ids <- rep(NA_integer_, n)
+    treated_idx <- which(D == 1)
+    fold_ids[treated_idx] <- sample(rep(1:n_folds, length.out = length(treated_idx)))
+    fold_ids[control_idx] <- sample(rep(1:n_folds, length.out = length(control_idx)))
 
-  for (k in 1:n_folds) {
-    train_idx <- which(fold_ids != k)
-    eval_idx <- which(fold_ids == k)
+    e_hat <- rep(NA_real_, n)
+    for (k in 1:n_folds) {
+      train_idx <- which(fold_ids != k)
+      eval_idx <- which(fold_ids == k)
 
-    e_forest <- grf::probability_forest(
-      X = ps_features[train_idx, , drop = FALSE],
-      Y = as.factor(D[train_idx]),
-      num.trees = 4000
-    )
-    e_probs <- predict(e_forest,
-      newdata = ps_features[eval_idx, , drop = FALSE])$predictions
-    e_hat[eval_idx] <- e_probs[, 2]
+      e_forest <- grf::probability_forest(
+        X = ps_features[train_idx, , drop = FALSE],
+        Y = as.factor(D[train_idx]),
+        num.trees = 4000
+      )
+      e_probs <- predict(e_forest,
+        newdata = ps_features[eval_idx, , drop = FALSE])$predictions
+      e_hat[eval_idx] <- e_probs[, 2]
+    }
   }
 
   # Trim propensity scores
@@ -178,13 +237,11 @@ dr_ml_attgt <- function(gt_data,
 
   extra_returns <- list(
     group = this.g, time_period = this.tp,
-    n_control = sum(1 - D), n_treated = n1,
+    n_control = n0, n_treated = n1,
     est_method = "dr_ml",
-    bad_control_vars = bad_vars, n_folds = n_folds
+    bad_control_var = bc_var, n_folds = n_folds
   )
 
   ptetools::attgt_if(attgt = att_dr, inf_func = inf_func,
                 extra_gt_returns = extra_returns)
 }
-
-

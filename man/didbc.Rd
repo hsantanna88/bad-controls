@@ -10,13 +10,12 @@ didbc(
   tname,
   idname = NULL,
   data,
-  bad_control_formula,
+  bad_control_formula = NULL,
   xformula = ~1,
+  d_covs_formula = NULL,
+  bad_control_cov_formula = NULL,
+  bad_control_d_cov_formula = NULL,
   est_method = c("imputation", "dr_ml"),
-  lagged_outcome_cov = TRUE,
-  n_folds = 5,
-  trim_ps = 0.01,
-  alpha_method = "one",
   control_group = "notyettreated",
   anticipation = 0,
   base_period = "varying",
@@ -24,8 +23,11 @@ didbc(
   cband = TRUE,
   alp = 0.05,
   boot_type = "multiplier",
+  bstrap = TRUE,
   cl = 1,
   biters = 100,
+  nfolds = 5,
+  trim_ps = 0.01,
   ...
 )
 }
@@ -42,27 +44,34 @@ never-treated units and the period of first treatment for treated units.}
 
 \item{data}{A balanced panel data.frame}
 
-\item{bad_control_formula}{One-sided formula specifying the bad control
-variables (time-varying covariates affected by treatment).
-E.g., \code{~X} or \code{~occ_score + experience}.}
+\item{bad_control_formula}{One-sided formula naming exactly one bad
+control variable (a time-varying covariate affected by treatment),
+e.g. \code{~X}. \code{NULL} (the default) means no bad control at all,
+in which case \code{didbc} reduces to plain DiD with covariates.
+Multiple bad controls are not yet supported.}
 
-\item{xformula}{One-sided formula for time-invariant covariates Z
-(default \code{~1})}
+\item{xformula}{One-sided formula for general exogenous covariates,
+entered as their pre-treatment-period level (default \code{~1})}
+
+\item{d_covs_formula}{One-sided formula for general exogenous covariates,
+entered as their change (post minus pre) rather than a level. Default
+\code{NULL} (unused).}
+
+\item{bad_control_cov_formula}{One-sided formula for auxiliary covariates
+(W in the paper) used to model the bad control's counterfactual
+evolution, entered as their pre-treatment-period level. Any variable
+name can be used here, including the outcome itself (e.g.
+\code{~Y} reproduces the old "lagged outcome as W" behavior). Default
+\code{NULL} (unused, and ignored if \code{bad_control_formula} is
+\code{NULL}).}
+
+\item{bad_control_d_cov_formula}{Like \code{bad_control_cov_formula}, but
+entered as a change (post minus pre) rather than a level. Default
+\code{NULL} (unused).}
 
 \item{est_method}{Estimation method: \code{"imputation"} (default) for
 the two-step imputation approach, or \code{"dr_ml"} for the doubly
 robust ML estimator.}
-
-\item{lagged_outcome_cov}{Logical; include lagged outcome as auxiliary
-variable W (default TRUE)}
-
-\item{n_folds}{Number of cross-fitting folds for DR/ML (default 5)}
-
-\item{trim_ps}{Propensity score trimming threshold for DR/ML (default 0.01)}
-
-\item{alpha_method}{How to estimate the density ratio alpha in DR/ML:
-\code{"one"} (default, valid under Simple Covariate Unconfoundedness) or
-\code{"classification"} (density ratio via classification)}
 
 \item{control_group}{Which units serve as controls: \code{"notyettreated"}
 (default) or \code{"nevertreated"}. Passed to
@@ -86,10 +95,19 @@ pointwise confidence intervals (default \code{TRUE})}
 
 \item{boot_type}{\code{"multiplier"} (default) or \code{"empirical"}}
 
+\item{bstrap}{Logical; whether to use the multiplier bootstrap
+(\code{TRUE}, the default) or purely analytical standard errors
+(\code{FALSE}) when the estimator returns an influence function.
+\code{bstrap = FALSE} only supports pointwise confidence intervals.}
+
 \item{cl}{Number of clusters for parallel computing in the bootstrap
 (default 1)}
 
 \item{biters}{Number of bootstrap iterations (default 100)}
+
+\item{nfolds}{Number of cross-fitting folds for DR/ML (default 5)}
+
+\item{trim_ps}{Propensity score trimming threshold for DR/ML (default 0.01)}
 
 \item{...}{Additional arguments passed to \code{ptetools::pte}}
 }
