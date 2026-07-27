@@ -40,6 +40,14 @@
 #'  The doubly robust score is consistent if either (m_0, nu_0) or (p_2,
 #'  omega_0) are correctly specified.
 #'
+#'  With no bad control at all (\code{bad_control_formula = NULL}), nu_0 and
+#'  omega_0 are not estimated at all: nu_0 = m_0 and omega_0 = p_2/(1-p_2)
+#'  exactly (m_0 no longer depends on X_t*, so there is nothing left for
+#'  nu_0 to marginalize over; p_2 is already a function of Z alone, so
+#'  omega_0's further conditioning on Z is a no-op). The doubly robust score
+#'  then reduces exactly to the classical Sant'Anna and Zhao (2020) AIPW-DiD
+#'  estimator.
+#'
 #'  There are two triggers that fall back to \code{imputation_attgt()} for a
 #'  whole (g,t) cell, rather than dropping p_2/omega_0 alone -- doing that
 #'  would leave a moment that is not Neyman orthogonal, which is exactly why
@@ -68,7 +76,8 @@
 #'   entered as their pre-treatment-period level (default \code{~1})
 #' @param bad_control_formula One-sided formula naming exactly one bad
 #'   control variable (a time-varying covariate affected by treatment).
-#'   Multiple bad controls are not yet supported.
+#'   \code{NULL} means no bad control at all; see Details. Multiple bad
+#'   controls are not yet supported.
 #' @param d_covs_formula One-sided formula for general exogenous covariates,
 #'   entered as their change (post minus pre) rather than a level. Used
 #'   only in the outcome regression. Default \code{NULL} (unused).
@@ -199,21 +208,26 @@ dr_ml_attgt <- function(gt_data,
   DeltaY <- wide_data$DeltaY
   comparison_idx <- which(D == 0)
 
-  # bad_control_formula is validated (exactly one variable) by didbc()
-  # before this function is ever called.
-  bc_var <- all.vars(bad_control_formula)[1]
-  # bc_pre/bc_post correspond to X_{t*-1}/X_{t*} in the paper. No
-  # counterfactual imputation is needed here: for untreated units X_t* =
-  # X_t*(0) is observed directly.
-  wide_data$bc_pre <- pre_data[[bc_var]][match(wide_data$id, pre_data$id)]
-  wide_data$bc_post <- post_data[[bc_var]][match(wide_data$id, post_data$id)]
+  # bad_control_formula is validated (exactly one variable, if not NULL) by
+  # didbc() before this function is ever called.
+  has_bc <- !is.null(bad_control_formula)
+  bc_var <- NULL
+  if (has_bc) {
+    bc_var <- all.vars(bad_control_formula)[1]
+    # bc_pre/bc_post correspond to X_{t*-1}/X_{t*} in the paper. No
+    # counterfactual imputation is needed here: for untreated units X_t* =
+    # X_t*(0) is observed directly.
+    wide_data$bc_pre <- pre_data[[bc_var]][match(wide_data$id, pre_data$id)]
+    wide_data$bc_post <- post_data[[bc_var]][match(wide_data$id, post_data$id)]
+  }
 
   # m_0 and omega_0 depend on (X_t*, X_t*-1, Z); nu_0 and p_2 depend on
   # (X_t*-1, W, Z). Z/W are generalized to include user-supplied exogenous
   # covariates, in levels or as changes -- the same regressor sets used for
-  # the analogous steps in imputation_attgt().
-  m_feat_names <- c("bc_post", "bc_pre", dx_names, x_names)
-  p_feat_names <- c("bc_pre", bc_cov_names, bc_dcov_names, dx_names, x_names)
+  # the analogous steps in imputation_attgt(). With no bad control, both
+  # collapse to just (Z), and nu_0/omega_0 are skipped entirely below.
+  m_feat_names <- c(if (has_bc) c("bc_post", "bc_pre"), dx_names, x_names)
+  p_feat_names <- c(if (has_bc) c("bc_pre", bc_cov_names, bc_dcov_names), dx_names, x_names)
 
   m_features <- as.matrix(wide_data[, m_feat_names, drop = FALSE])
   p_features <- as.matrix(wide_data[, p_feat_names, drop = FALSE])
@@ -305,19 +319,33 @@ dr_ml_attgt <- function(gt_data,
     # Second stage (Algorithm 1, step 2b): nu_0 regresses m_0's in-sample
     # fitted values on (X_t*-1, W, Z); omega_0 regresses p_2's in-sample
     # fitted odds ratio on (X_t*, X_t*-1, Z) -- both among untreated units
-    # in the training fold.
-    m_fitted_train <- predict_reg_nuisance(m_fit, m_features_train_comp, nuisance_method)
-    nu_fit <- fit_reg_nuisance(p_features_train_comp, m_fitted_train, nuisance_method)
+    # in the training fold. With no bad control, nu_0 = m_0 and
+    # omega_0 = p_2/(1-p_2) exactly (m_0 no longer depends on X_t*, so
+    # there is nothing left for nu_0 to marginalize over; p_2 is already a
+    # function of Z alone, so omega_0's further conditioning on Z is a
+    # no-op), so there is nothing to fit here.
+    if (has_bc) {
+      m_fitted_train <- predict_reg_nuisance(m_fit, m_features_train_comp, nuisance_method)
+      nu_fit <- fit_reg_nuisance(p_features_train_comp, m_fitted_train, nuisance_method)
 
-    p_fitted_train <- predict_prop_nuisance(p_fit, p_features_train_comp, nuisance_method)
-    odds_fitted_train <- p_fitted_train / (1 - p_fitted_train)
-    omega_fit <- fit_reg_nuisance(m_features_train_comp, odds_fitted_train, nuisance_method)
+      p_fitted_train <- predict_prop_nuisance(p_fit, p_features_train_comp, nuisance_method)
+      odds_fitted_train <- p_fitted_train / (1 - p_fitted_train)
+      omega_fit <- fit_reg_nuisance(m_features_train_comp, odds_fitted_train, nuisance_method)
+    }
 
     # Evaluate all four nuisance functions on the held-out fold (step 3).
     m_hat[eval_idx] <- predict_reg_nuisance(m_fit, m_features_eval, nuisance_method)
-    nu_hat[eval_idx] <- predict_reg_nuisance(nu_fit, p_features_eval, nuisance_method)
     p_hat[eval_idx] <- predict_prop_nuisance(p_fit, p_features_eval, nuisance_method)
-    omega_hat[eval_idx] <- predict_reg_nuisance(omega_fit, m_features_eval, nuisance_method)
+    nu_hat[eval_idx] <- if (has_bc) {
+      predict_reg_nuisance(nu_fit, p_features_eval, nuisance_method)
+    } else {
+      m_hat[eval_idx]
+    }
+    omega_hat[eval_idx] <- if (has_bc) {
+      predict_reg_nuisance(omega_fit, m_features_eval, nuisance_method)
+    } else {
+      p_hat[eval_idx] / (1 - p_hat[eval_idx])
+    }
   }
 
   # Doubly robust score (eqn:eif1 / eq:att-dr-sample in the paper)

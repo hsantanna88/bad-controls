@@ -28,7 +28,8 @@ entered as their pre-treatment-period level (default \code{~1})}
 
 \item{bad_control_formula}{One-sided formula naming exactly one bad
 control variable (a time-varying covariate affected by treatment).
-Multiple bad controls are not yet supported.}
+\code{NULL} means no bad control at all; see Details. Multiple bad
+controls are not yet supported.}
 
 \item{d_covs_formula}{One-sided formula for general exogenous covariates,
 entered as their change (post minus pre) rather than a level. Used
@@ -115,6 +116,14 @@ second regression rather than plugging in a predicted X_t*(0).
 
 The doubly robust score is consistent if either (m_0, nu_0) or (p_2,
 omega_0) are correctly specified.
+
+With no bad control at all (\code{bad_control_formula = NULL}), nu_0 and
+omega_0 are not estimated at all: nu_0 = m_0 and omega_0 = p_2/(1-p_2)
+exactly (m_0 no longer depends on X_t*, so there is nothing left for
+nu_0 to marginalize over; p_2 is already a function of Z alone, so
+omega_0's further conditioning on Z is a no-op). The doubly robust score
+then reduces exactly to the classical Sant'Anna and Zhao (2020) AIPW-DiD
+estimator.
 
 There are two triggers that fall back to \code{imputation_attgt()} for a
 whole (g,t) cell, rather than dropping p_2/omega_0 alone -- doing that

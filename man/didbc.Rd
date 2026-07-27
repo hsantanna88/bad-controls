@@ -160,7 +160,7 @@ Sant'Anna (2024). Two estimation approaches are available:
 
 \strong{Doubly Robust ML} (\code{est_method = "dr_ml"}):
 \enumerate{
-\item Estimate six nuisance functions via random forests
+\item Estimate four nuisance functions via random forests
 \item Combine into a doubly robust score with cross-fitting
 \item Returns influence function for fast inference
 }

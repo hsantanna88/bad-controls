@@ -64,6 +64,24 @@ test_that("didbc imputation recovers true ATT with bad_control_formula = NULL (D
   expect_equal(res$overall_att$overall.att, sim$true_att_overall, tolerance = 0.05)
 })
 
+test_that("didbc dr_ml recovers true ATT with bad_control_formula = NULL (DGP1)", {
+  # No bad control: nu_0 = m_0 and omega_0 = p_2/(1-p_2) exactly (nothing
+  # left to marginalize/condition on further -- see dr_ml_attgt()'s
+  # Details), so the score reduces exactly to the classical Sant'Anna and
+  # Zhao (2020) AIPW-DiD estimator. Same DGP1 rationale as the analogous
+  # imputation test above.
+  set.seed(1)
+  sim <- simulate_bad_controls(
+    n = 2000, T_max = 2, groups = 2, dgp = "dgp1", beta_drift = 0
+  )
+  res <- suppressWarnings(didbc(
+    yname = "Y", gname = "G", tname = "period", idname = "id",
+    data = sim$data, bad_control_formula = NULL, xformula = ~Z,
+    est_method = "dr_ml", nfolds = 3, biters = 0
+  ))
+  expect_equal(res$overall_att$overall.att, sim$true_att_overall, tolerance = 0.1)
+})
+
 test_that("didbc dr_ml recovers true ATT under DGP1 (linear W)", {
   set.seed(4)
   sim <- simulate_bad_controls(
