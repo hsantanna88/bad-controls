@@ -24,8 +24,7 @@ columns id, D, period, name (pre/post), Y, plus covariate columns}
 entered as their pre-treatment-period level (default \code{~1})}
 
 \item{bad_control_formula}{One-sided formula naming exactly one bad
-control variable. \code{NULL} (the default) means no bad control at
-all, in which case this reduces to a standard AIPW-DiD estimator.
+control variable (a time-varying covariate affected by treatment).
 Multiple bad controls are not yet supported.}
 
 \item{d_covs_formula}{One-sided formula for general exogenous covariates,
@@ -60,29 +59,29 @@ and K-fold cross-fitting. Estimates ATT(g,t) in the presence of
 post-treatment covariates (bad controls).
 }
 \details{
-The estimator uses two nuisance functions estimated via random
-forests (\code{grf} package):
+Implements Algorithm 1 from the paper: four nuisance functions,
+all estimated via random forests (\code{grf} package) with K-fold
+cross-fitting:
 \itemize{
-\item m(X(t-1), W, Z): outcome regression E\link{DeltaY | X(t-1), W, Z, D=0}
-\item e(X(t-1), W, Z): generalized propensity score P(D=1 | X(t-1), W, Z)
+\item m_0(X_t*, X_t*-1, Z): outcome regression E\link[=DeltaY | X_t*, X_t*-1,
+     Z, D=0]{DeltaY | X_t*, X_t*-1, Z, D=0}
+\item nu_0(X_t*-1, W, Z): E\link{m_0(X_t*, X_t*-1, Z) | X_t*-1, W, Z, D=0}, a
+second-stage regression of m_0's fitted values on (X_t*-1, W, Z)
+among untreated units
+\item p_2(X_t*-1, W, Z): the propensity score P(D=1 | X_t*-1, W, Z)
+\item omega_0(X_t*, X_t*-1, Z): E\link{p_2/(1-p_2) | X_t*, X_t*-1, Z, D=0}, a
+regression of the fitted propensity odds ratio on (X_t*, X_t*-1, Z)
+among untreated units
 }
 
-Under Conditional Parallel Trends given (X_t(0), Z) and Covariate
-Unconfoundedness X_t(0) indep D | X(t-1), W, Z, the law of iterated
-expectations gives:
-E\link{DeltaY(0) | X(t-1), W, Z, D=1} = E\link{DeltaY | X(t-1), W, Z, D=0}
-so the standard AIPW-DiD applies with covariates (X(t-1), W, Z).
+Unlike the imputation estimator, no counterfactual imputation of the bad
+control is needed: X_t* is observed directly for untreated units (X_t* =
+X_t*(0)), and nu_0/omega_0 target m_0's/p_2's fitted values through a
+second regression rather than plugging in a predicted X_t*(0).
 
-The propensity score model uses only pre-treatment-period information
-(X(t-1), W as a level, Z) -- the differenced covariates
-(\code{d_covs_formula}, \code{bad_control_d_cov_formula}) are used only
-in the outcome regression, not the propensity score, since they require
-post-treatment-period data to construct.
-
-The doubly robust score provides consistent estimation if either
-the outcome regression or the propensity score model is correctly
-specified. Cross-fitting ensures valid inference with ML first-stage
-estimation.
+The doubly robust score is consistent if either (m_0, nu_0) or (p_2,
+omega_0) are correctly specified. Cross-fitting ensures valid inference
+with ML first-stage estimation.
 }
 \references{
 Caetano, C., Callaway, B., Payne, S., and Sant'Anna, H. (2024).

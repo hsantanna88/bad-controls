@@ -26,7 +26,6 @@ imputation_attgt <- function(gt_data,
                              bad_control_cov_formula = NULL,
                              bad_control_d_cov_formula = NULL,
                              ...) {
-
   # Separate pre and post, pivot to wide (one row per unit, pre/post as
   # separate columns)
   pre_data <- gt_data[gt_data$name == "pre", ]
@@ -87,67 +86,66 @@ imputation_attgt <- function(gt_data,
 
   comparison_idx <- which(D == 0)
 
-  if (is.null(bad_control_formula)) {
-    # --- No bad control: plain DiD with covariates ---
-    rhs <- c(dx_names, x_names)
-    out_fml <- if (length(rhs) == 0) DeltaY ~ 1 else stats::reformulate(rhs, response = "DeltaY")
-    reg_fit <- stats::lm(out_fml, data = wide_data[comparison_idx, ])
-    mu_hat <- stats::predict(reg_fit, newdata = wide_data)
-  } else {
-    bc_vars <- all.vars(bad_control_formula)
-    if (length(bc_vars) != 1) {
-      stop(
-        "`bad_control_formula` must name exactly one variable; ",
-        "multiple bad controls are not yet supported."
-      )
-    }
-    bc_var <- bc_vars[1]
+  # bad_control_formula is validated (exactly one variable) by didbc()
+  # before this function is ever called.
+  bc_var <- all.vars(bad_control_formula)[1]
 
-    # bc_pre/bc_post correspond to X_{t*-1}/X_{t*} in the paper; bc_post_imp
-    # is the observed value for comparison units and the imputed
-    # counterfactual X_{t*}(0) for treated units.
-    wide_data$bc_pre <- pre_data[[bc_var]][match(wide_data$id, pre_data$id)]
-    wide_data$bc_post <- post_data[[bc_var]][match(wide_data$id, post_data$id)]
+  # bc_pre/bc_post correspond to X_{t*-1}/X_{t*} in the paper; bc_post_imp
+  # is the observed value for comparison units and the imputed
+  # counterfactual X_{t*}(0) for treated units.
+  wide_data$bc_pre <- pre_data[[bc_var]][match(wide_data$id, pre_data$id)]
+  wide_data$bc_post <- post_data[[bc_var]][match(wide_data$id, post_data$id)]
 
-    # Warn (not error) if the bad control shows no real time variation among
-    # comparison units -- a constant "bad control" isn't really one, but the
-    # code can still handle it.
-    if (isTRUE(all.equal(wide_data$bc_pre[comparison_idx], wide_data$bc_post[comparison_idx]))) {
-      warning(
-        "`", bc_var, "` does not appear to vary over time among comparison ",
-        "units; it may not be a genuine bad control."
-      )
-    }
+  # Step 1: impute untreated potential covariate
+  imp_rhs <- c("bc_pre", bc_cov_names, bc_dcov_names, x_names)
+  imp_fml <- stats::reformulate(imp_rhs, response = "bc_post")
+  imp_fit <- stats::lm(imp_fml, data = wide_data[comparison_idx, ])
+  wide_data$bc_post_imp <- ifelse(
+    D == 1, stats::predict(imp_fit, newdata = wide_data), wide_data$bc_post
+  )
 
-    # Step 1: among comparison units, learn X_t(0) ~ X_{t-1} + W + Z
-    imp_rhs <- c("bc_pre", bc_cov_names, bc_dcov_names, x_names)
-    imp_fml <- stats::reformulate(imp_rhs, response = "bc_post")
-    imp_fit <- stats::lm(imp_fml, data = wide_data[comparison_idx, ])
-    wide_data$bc_post_imp <- ifelse(
-      D == 1, stats::predict(imp_fit, newdata = wide_data), wide_data$bc_post
-    )
+  # Step 2: impute untreated potential outcomes
+  out_rhs <- c("bc_post_imp", "bc_pre", dx_names, x_names)
+  out_fml <- stats::reformulate(out_rhs, response = "DeltaY")
+  reg_fit <- stats::lm(out_fml, data = wide_data[comparison_idx, ])
+  mu_hat <- stats::predict(reg_fit, newdata = wide_data)
 
-    # Step 2: outcome regression with SEPARATE coefficients on X_t and
-    # X_{t-1} (not their difference -- forcing equal-and-opposite
-    # coefficients is a restriction the paper's model does not impose).
-    # NOTE: bc_cov/bc_dcov are used only in Step 1. Including them here
-    # would create mechanical correlation whenever they are (or are derived
-    # from) a lagged outcome, since DeltaY = Y_post - Y_pre.
-    out_rhs <- c("bc_post_imp", "bc_pre", dx_names, x_names)
-    out_fml <- stats::reformulate(out_rhs, response = "DeltaY")
-    reg_fit <- stats::lm(out_fml, data = wide_data[comparison_idx, ])
-    mu_hat <- stats::predict(reg_fit, newdata = wide_data)
-  }
-
-  # ATT = mean(DeltaY - mu) for treated
+  # ATT-hat_ra = m1-hat - tau-hat_ra (eq:att-ra): treated mean DeltaY minus
+  # treated mean of nu_0-hat.
   att <- mean(wide_data$DeltaY[D == 1] - mu_hat[D == 1])
 
-  # Influence function
+  # Influence function (eq:psi-ra-final in the supplementary appendix). The
+  # treated-group term reflects sampling variation in DeltaY and nu_0-hat;
+  # the comparison-group term corrects for estimation uncertainty in
+  # gamma-hat (Step 1) and beta-hat (Step 2), via the OLS asymptotic linear
+  # representations in the "OLS asymptotic linear representations" lemma.
   n1 <- sum(D)
   n0 <- n - n1
+  pi_hat <- n1 / n
+
+  r_mat <- stats::model.matrix(reg_fit) # R_i, comparison rows
+  u <- stats::residuals(reg_fit) # u_i = DeltaY_i - R_i'beta
+  s_mat <- stats::model.matrix(imp_fit) # S_i, comparison rows
+  v <- stats::residuals(imp_fit) # v_i = bc_post_i - S_i'gamma
+
+  sigma_r <- crossprod(r_mat) / n0
+  sigma_s <- crossprod(s_mat) / n0
+
+  # R-tilde_i and S_i evaluated at treated units: for treated rows
+  # "bc_post_imp" already equals the fitted counterfactual S_i'gamma-hat, so
+  # the reg_fit design matrix evaluated there is exactly R-tilde.
+  r_mat_treated <- stats::model.matrix(out_fml, data = wide_data[D == 1, , drop = FALSE])
+  s_mat_treated <- stats::model.matrix(imp_fml, data = wide_data[D == 1, , drop = FALSE])
+  beta1_hat <- stats::coef(reg_fit)["bc_post_imp"]
+
+  kappa_r <- solve(sigma_r, colMeans(r_mat_treated))
+  kappa_s <- solve(sigma_s, beta1_hat * colMeans(s_mat_treated))
+
+  correction <- as.numeric(r_mat %*% kappa_r) * u + as.numeric(s_mat %*% kappa_s) * v
+
   inf_func <- rep(0, n)
-  inf_func[D == 1] <- (wide_data$DeltaY[D == 1] - mu_hat[D == 1] - att)
-  inf_func[D == 0] <- -(n1 / n0) * (wide_data$DeltaY[D == 0] - mu_hat[D == 0])
+  inf_func[D == 1] <- (1 / pi_hat) * (wide_data$DeltaY[D == 1] - mu_hat[D == 1] - att)
+  inf_func[comparison_idx] <- -(1 / (1 - pi_hat)) * correction
 
   ptetools::attgt_if(attgt = att, inf_func = inf_func)
 }

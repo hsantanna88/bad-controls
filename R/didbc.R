@@ -135,6 +135,32 @@ didbc <- function(yname,
 
   est_method <- match.arg(est_method)
 
+  # Validate bad_control_formula once here, at the entry point, rather than
+  # inside each (g,t) cell in imputation_attgt()/dr_ml_attgt().
+  if (!is.null(bad_control_formula)) {
+    bc_vars <- all.vars(bad_control_formula)
+    if (length(bc_vars) != 1) {
+      stop(
+        "`bad_control_formula` must name exactly one variable; ",
+        "multiple bad controls are not yet supported."
+      )
+    }
+    bc_var <- bc_vars[1]
+
+    # Warn (not error) if the bad control shows no real time variation for
+    # any unit in the panel -- a constant "bad control" isn't really one,
+    # but the estimators can still handle it.
+    if (!is.null(idname)) {
+      within_id_range <- tapply(data[[bc_var]], data[[idname]], function(x) diff(range(x)))
+      if (isTRUE(all.equal(max(within_id_range), 0))) {
+        warning(
+          "`", bc_var, "` does not appear to vary over time for any unit; ",
+          "it may not be a genuine bad control."
+        )
+      }
+    }
+  }
+
   if (est_method == "dr_ml") {
     attgt_fun <- function(gt_data, ...) {
       dr_ml_attgt(
