@@ -40,15 +40,27 @@
 #'  The doubly robust score is consistent if either (m_0, nu_0) or (p_2,
 #'  omega_0) are correctly specified.
 #'
-#'  Before cross-fitting, a preliminary propensity model (not used in the
-#'  final estimation) is fit once on the whole cell to check overlap: if any
-#'  unit's fitted propensity exceeds \code{overlap_threshold}, a warning
-#'  names the group, time period, and offending unit IDs, and estimation
-#'  falls back to \code{imputation_attgt()} for that (g,t) cell entirely,
-#'  rather than dropping p_2/omega_0 alone -- doing that would leave a
-#'  moment that is not Neyman orthogonal, which is exactly why
+#'  There are two triggers that fall back to \code{imputation_attgt()} for a
+#'  whole (g,t) cell, rather than dropping p_2/omega_0 alone -- doing that
+#'  would leave a moment that is not Neyman orthogonal, which is exactly why
 #'  \code{imputation_attgt()} needs its own first-stage correction terms
-#'  that this function's nuisances don't have.
+#'  that this function's nuisances don't have:
+#'  \enumerate{
+#'    \item \strong{Small treated group.} If the cell has fewer treated
+#'      units than the number of p_2 covariates plus \code{min_group_size},
+#'      a warning names the group, time period, and treated count. Fitting
+#'      p_2 needs a nontrivial treated sample to identify at all, relative
+#'      to how many covariates it has to fit (a logit can hit perfect
+#'      separation, a \code{probability_forest} is essentially memorizing a
+#'      handful of points), which can happen even when the population-level
+#'      covariate distributions overlap fine -- a distinct problem from
+#'      overlap below.
+#'    \item \strong{Overlap.} Before cross-fitting, a preliminary propensity
+#'      model (not used in the final estimation) is fit once on the whole
+#'      cell: if any unit's fitted propensity exceeds
+#'      \code{overlap_threshold}, a warning names the group, time period,
+#'      and offending unit IDs.
+#'  }
 #'
 #' @param gt_data data.frame from \code{ptetools::two_by_two_subset} with
 #'   columns id, D, period, name (pre/post), Y, plus covariate columns
@@ -82,6 +94,11 @@
 #' @param overlap_threshold If any unit's fitted propensity (from a
 #'   preliminary, non-cross-fit fit) exceeds this value, estimation falls
 #'   back to \code{imputation_attgt()} for that (g,t) cell. Default 0.99.
+#' @param min_group_size If a (g,t) cell has fewer treated units than the
+#'   number of p_2 covariates plus \code{min_group_size}, estimation falls
+#'   back to \code{imputation_attgt()} for that cell (a separate trigger
+#'   from \code{overlap_threshold}; see Details). Default 5, matching
+#'   \code{did}'s own convention for an analogous check.
 #' @param n_folds number of cross-fitting folds (default 5)
 #' @param ... additional arguments (unused)
 #'
@@ -104,6 +121,7 @@ dr_ml_attgt <- function(gt_data,
                         nuisance_method = c("ml", "parametric"),
                         bad_control_binary = FALSE,
                         overlap_threshold = 0.99,
+                        min_group_size = 5,
                         n_folds = 5,
                         ...) {
 
@@ -199,6 +217,36 @@ dr_ml_attgt <- function(gt_data,
 
   m_features <- as.matrix(wide_data[, m_feat_names, drop = FALSE])
   p_features <- as.matrix(wide_data[, p_feat_names, drop = FALSE])
+
+  # Small treated group: even under perfect overlap, fitting p_2 (and by
+  # extension omega_0) needs a nontrivial treated sample to identify at all
+  # relative to how many covariates it has to fit -- with too few treated
+  # units, a logit can hit perfect separation and a probability_forest is
+  # essentially memorizing a handful of points. Unlike the overlap check
+  # below, this doesn't need an unlucky covariate configuration to show up;
+  # it can happen even when the population-level covariate distributions
+  # overlap fine. Falls back to imputation_attgt() the same way, since its
+  # Step 1/Step 2 are fit entirely on the comparison group and only ever
+  # average over treated units, never fit anything on them.
+  min_treated <- length(p_feat_names) + min_group_size
+  if (n1 < min_treated) {
+    warning(
+      "Group ", this_g, " in time period ", this_tp, " has only ", n1,
+      " treated unit(s), fewer than the ", length(p_feat_names),
+      " p_2 covariate(s) plus min_group_size = ", min_group_size,
+      " (", min_treated, "); falling back to the imputation estimator ",
+      "for this (g,t) cell."
+    )
+    return(imputation_attgt(
+      gt_data = gt_data,
+      xformula = xformula,
+      bad_control_formula = bad_control_formula,
+      d_covs_formula = d_covs_formula,
+      bad_control_cov_formula = bad_control_cov_formula,
+      bad_control_d_cov_formula = bad_control_d_cov_formula,
+      bad_control_binary = bad_control_binary
+    ))
+  }
 
   # Overlap check (not cross-fit -- a preliminary diagnostic fit, never used
   # in the final estimation). Uses the same nuisance_method as the real

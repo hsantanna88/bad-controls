@@ -14,6 +14,7 @@ dr_ml_attgt(
   nuisance_method = c("ml", "parametric"),
   bad_control_binary = FALSE,
   overlap_threshold = 0.99,
+  min_group_size = 5,
   n_folds = 5,
   ...
 )
@@ -59,6 +60,12 @@ in case of a fallback on overlap; see Details.}
 \item{overlap_threshold}{If any unit's fitted propensity (from a
 preliminary, non-cross-fit fit) exceeds this value, estimation falls
 back to \code{imputation_attgt()} for that (g,t) cell. Default 0.99.}
+
+\item{min_group_size}{If a (g,t) cell has fewer treated units than the
+number of p_2 covariates plus \code{min_group_size}, estimation falls
+back to \code{imputation_attgt()} for that cell (a separate trigger
+from \code{overlap_threshold}; see Details). Default 5, matching
+\code{did}'s own convention for an analogous check.}
 
 \item{n_folds}{number of cross-fitting folds (default 5)}
 
@@ -109,15 +116,27 @@ second regression rather than plugging in a predicted X_t*(0).
 The doubly robust score is consistent if either (m_0, nu_0) or (p_2,
 omega_0) are correctly specified.
 
-Before cross-fitting, a preliminary propensity model (not used in the
-final estimation) is fit once on the whole cell to check overlap: if any
-unit's fitted propensity exceeds \code{overlap_threshold}, a warning
-names the group, time period, and offending unit IDs, and estimation
-falls back to \code{imputation_attgt()} for that (g,t) cell entirely,
-rather than dropping p_2/omega_0 alone -- doing that would leave a
-moment that is not Neyman orthogonal, which is exactly why
+There are two triggers that fall back to \code{imputation_attgt()} for a
+whole (g,t) cell, rather than dropping p_2/omega_0 alone -- doing that
+would leave a moment that is not Neyman orthogonal, which is exactly why
 \code{imputation_attgt()} needs its own first-stage correction terms
-that this function's nuisances don't have.
+that this function's nuisances don't have:
+\enumerate{
+\item \strong{Small treated group.} If the cell has fewer treated
+units than the number of p_2 covariates plus \code{min_group_size},
+a warning names the group, time period, and treated count. Fitting
+p_2 needs a nontrivial treated sample to identify at all, relative
+to how many covariates it has to fit (a logit can hit perfect
+separation, a \code{probability_forest} is essentially memorizing a
+handful of points), which can happen even when the population-level
+covariate distributions overlap fine -- a distinct problem from
+overlap below.
+\item \strong{Overlap.} Before cross-fitting, a preliminary propensity
+model (not used in the final estimation) is fit once on the whole
+cell: if any unit's fitted propensity exceeds
+\code{overlap_threshold}, a warning names the group, time period,
+and offending unit IDs.
+}
 }
 \references{
 Caetano, C., Callaway, B., Payne, S., and Sant'Anna, H. (2024).

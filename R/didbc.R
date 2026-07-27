@@ -68,6 +68,16 @@
 #'   exceeds this value in a (g,t) cell, estimation falls back to the
 #'   imputation estimator for that cell, with a warning naming the group,
 #'   time period, and offending unit IDs. Default 0.99.
+#' @param min_group_size For \code{est_method = "dr_ml"} only: if a (g,t)
+#'   cell has fewer treated units than the number of propensity-score
+#'   covariates plus \code{min_group_size}, estimation falls back to the
+#'   imputation estimator for that cell, with a warning naming the group,
+#'   time period, and treated count -- a separate trigger from
+#'   \code{overlap_threshold}, since fitting the propensity score needs a
+#'   nontrivial treated sample to identify at all, relative to how many
+#'   covariates it has to fit, which can fail even under good covariate
+#'   overlap. Default 5, matching \code{did}'s own convention for an
+#'   analogous check.
 #' @param ... Additional arguments passed to \code{ptetools::pte}
 #'
 #' @return A \code{pte_results} object containing:
@@ -141,6 +151,7 @@ didbc <- function(yname,
                   biters = 100,
                   nfolds = 5,
                   overlap_threshold = 0.99,
+                  min_group_size = 5,
                   ...) {
 
   est_method <- match.arg(est_method)
@@ -189,6 +200,7 @@ didbc <- function(yname,
         nuisance_method = nuisance_method,
         bad_control_binary = bad_control_binary,
         overlap_threshold = overlap_threshold,
+        min_group_size = min_group_size,
         n_folds = nfolds
       )
     }

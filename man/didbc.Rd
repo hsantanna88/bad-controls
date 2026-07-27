@@ -29,6 +29,7 @@ didbc(
   biters = 100,
   nfolds = 5,
   overlap_threshold = 0.99,
+  min_group_size = 5,
   ...
 )
 }
@@ -119,6 +120,17 @@ unit's fitted propensity (from a preliminary, non-cross-fit fit)
 exceeds this value in a (g,t) cell, estimation falls back to the
 imputation estimator for that cell, with a warning naming the group,
 time period, and offending unit IDs. Default 0.99.}
+
+\item{min_group_size}{For \code{est_method = "dr_ml"} only: if a (g,t)
+cell has fewer treated units than the number of propensity-score
+covariates plus \code{min_group_size}, estimation falls back to the
+imputation estimator for that cell, with a warning naming the group,
+time period, and treated count -- a separate trigger from
+\code{overlap_threshold}, since fitting the propensity score needs a
+nontrivial treated sample to identify at all, relative to how many
+covariates it has to fit, which can fail even under good covariate
+overlap. Default 5, matching \code{did}'s own convention for an
+analogous check.}
 
 \item{...}{Additional arguments passed to \code{ptetools::pte}}
 }
