@@ -80,70 +80,71 @@ dr_ml_attgt <- function(gt_data,
   }
 
   # Extract group/time info
-  this.g <- unique(gt_data$G[gt_data$name == "post" & gt_data$D == 1])
-  this.tp <- unique(gt_data$period[gt_data$name == "post"])
+  this_g <- unique(gt_data$G[gt_data$name == "post" & gt_data$D == 1])
+  this_tp <- unique(gt_data$period[gt_data$name == "post"])
 
-  # Pivot panel to cross-section
+  # Pivot panel to wide (one row per unit, pre/post as separate columns)
   pre_data <- gt_data[gt_data$name == "pre", ]
   post_data <- gt_data[gt_data$name == "post", ]
 
-  cs <- merge(
+  wide_data <- merge(
     pre_data[, c("id", "D", "Y")],
     post_data[, c("id", "Y")],
     by = "id", suffixes = c("_pre", "_post")
   )
-  cs$DeltaY <- cs$Y_post - cs$Y_pre
-  D <- cs$D
+  wide_data$DeltaY <- wide_data$Y_post - wide_data$Y_pre
+  D <- wide_data$D
 
-  # --- Z: general exogenous covariates, pre-period level ---
+  # --- x: general exogenous covariates, pre-period level ---
   if (is.null(xformula)) xformula <- ~1
-  Z_frame <- stats::model.frame(xformula, data = pre_data)
-  Z_names <- character(0)
-  if (ncol(Z_frame) > 0) {
-    Z_df <- cbind(data.frame(id = pre_data$id), Z_frame)
-    cs <- merge(cs, Z_df, by = "id")
-    Z_names <- names(Z_frame)
+  x_pre <- stats::model.frame(xformula, data = pre_data)
+  x_names <- character(0)
+  if (ncol(x_pre) > 0) {
+    x_df <- cbind(data.frame(id = pre_data$id), x_pre)
+    wide_data <- merge(wide_data, x_df, by = "id")
+    x_names <- names(x_pre)
   }
-  D <- cs$D # re-extract after merge
+  D <- wide_data$D # re-extract after merge
 
   # --- general exogenous covariates entered as a change ---
-  dZ_names <- character(0)
+  dx_names <- character(0)
   if (!is.null(d_covs_formula)) {
     dcov_vars <- all.vars(d_covs_formula)
     for (v in dcov_vars) {
-      cs[[paste0("d_", v)]] <- post_data[[v]][match(cs$id, post_data$id)] -
-        pre_data[[v]][match(cs$id, pre_data$id)]
+      wide_data[[paste0("d_", v)]] <- post_data[[v]][match(wide_data$id, post_data$id)] -
+        pre_data[[v]][match(wide_data$id, pre_data$id)]
     }
-    dZ_names <- paste0("d_", dcov_vars)
+    dx_names <- paste0("d_", dcov_vars)
   }
 
-  # --- W: auxiliary covariates for modeling the bad control, pre-period level
-  W_names <- character(0)
+  # --- bc_cov: auxiliary covariates for modeling the bad control, pre-period
+  # level (W in the paper) ---
+  bc_cov_names <- character(0)
   if (!is.null(bad_control_cov_formula)) {
-    w_vars <- all.vars(bad_control_cov_formula)
-    for (v in w_vars) {
-      cs[[paste0("w_", v)]] <- pre_data[[v]][match(cs$id, pre_data$id)]
+    bc_cov_vars <- all.vars(bad_control_cov_formula)
+    for (v in bc_cov_vars) {
+      wide_data[[paste0("bc_cov_", v)]] <- pre_data[[v]][match(wide_data$id, pre_data$id)]
     }
-    W_names <- paste0("w_", w_vars)
+    bc_cov_names <- paste0("bc_cov_", bc_cov_vars)
   }
 
-  # --- W entered as a change instead of a level ---
-  dW_names <- character(0)
+  # --- bc_cov entered as a change instead of a level ---
+  bc_dcov_names <- character(0)
   if (!is.null(bad_control_d_cov_formula)) {
-    dw_vars <- all.vars(bad_control_d_cov_formula)
-    for (v in dw_vars) {
-      cs[[paste0("dw_", v)]] <- post_data[[v]][match(cs$id, post_data$id)] -
-        pre_data[[v]][match(cs$id, pre_data$id)]
+    bc_dcov_vars <- all.vars(bad_control_d_cov_formula)
+    for (v in bc_dcov_vars) {
+      wide_data[[paste0("bc_dcov_", v)]] <- post_data[[v]][match(wide_data$id, post_data$id)] -
+        pre_data[[v]][match(wide_data$id, pre_data$id)]
     }
-    dW_names <- paste0("dw_", dw_vars)
+    bc_dcov_names <- paste0("bc_dcov_", bc_dcov_vars)
   }
 
-  n <- nrow(cs)
+  n <- nrow(wide_data)
   n1 <- sum(D)
   n0 <- n - n1
   p_hat <- n1 / n
-  DeltaY <- cs$DeltaY
-  control_idx <- which(D == 0)
+  DeltaY <- wide_data$DeltaY
+  comparison_idx <- which(D == 0)
 
   has_bc <- !is.null(bad_control_formula)
   bc_var <- NULL
@@ -157,49 +158,54 @@ dr_ml_attgt <- function(gt_data,
       )
     }
     bc_var <- bc_vars[1]
-    cs$X_pre <- pre_data[[bc_var]][match(cs$id, pre_data$id)]
-    cs$X_post <- post_data[[bc_var]][match(cs$id, post_data$id)]
+    # bc_pre/bc_post correspond to X_{t*-1}/X_{t*} in the paper; bc_post_imp
+    # is the observed value for comparison units and the imputed
+    # counterfactual X_{t*}(0) for treated units.
+    wide_data$bc_pre <- pre_data[[bc_var]][match(wide_data$id, pre_data$id)]
+    wide_data$bc_post <- post_data[[bc_var]][match(wide_data$id, post_data$id)]
 
     # Warn (not error) if the bad control shows no real time variation
-    # among controls -- a constant "bad control" isn't really one, but the
-    # code can still handle it.
-    if (isTRUE(all.equal(cs$X_pre[control_idx], cs$X_post[control_idx]))) {
+    # among comparison units -- a constant "bad control" isn't really one,
+    # but the code can still handle it.
+    if (isTRUE(all.equal(wide_data$bc_pre[comparison_idx], wide_data$bc_post[comparison_idx]))) {
       warning(
-        "`", bc_var, "` does not appear to vary over time among untreated ",
+        "`", bc_var, "` does not appear to vary over time among comparison ",
         "units; it may not be a genuine bad control."
       )
     }
 
     # STEP 1: impute X_t(0) for treated (OLS, same as imputation estimator)
-    imp_rhs <- c("X_pre", W_names, dW_names, Z_names)
-    imp_fml <- stats::reformulate(imp_rhs, response = "X_post")
-    imp_fit <- stats::lm(imp_fml, data = cs[control_idx, ])
-    cs$X_post_imp <- ifelse(D == 1, stats::predict(imp_fit, newdata = cs), cs$X_post)
+    imp_rhs <- c("bc_pre", bc_cov_names, bc_dcov_names, x_names)
+    imp_fml <- stats::reformulate(imp_rhs, response = "bc_post")
+    imp_fit <- stats::lm(imp_fml, data = wide_data[comparison_idx, ])
+    wide_data$bc_post_imp <- ifelse(
+      D == 1, stats::predict(imp_fit, newdata = wide_data), wide_data$bc_post
+    )
 
     # STEP 2: outcome regression, SEPARATE coefficients on X_t and X_{t-1}
     # (not their difference -- see imputation_attgt for why).
-    or_rhs <- c("X_post_imp", "X_pre", dZ_names, Z_names)
+    or_rhs <- c("bc_post_imp", "bc_pre", dx_names, x_names)
   } else {
-    or_rhs <- c(dZ_names, Z_names)
+    or_rhs <- c(dx_names, x_names)
   }
 
   or_fml <- if (length(or_rhs) == 0) DeltaY ~ 1 else stats::reformulate(or_rhs, response = "DeltaY")
-  or_fit <- stats::lm(or_fml, data = cs[control_idx, ])
-  m_hat <- stats::predict(or_fit, newdata = cs)
+  or_fit <- stats::lm(or_fml, data = wide_data[comparison_idx, ])
+  m_hat <- stats::predict(or_fit, newdata = wide_data)
 
   # STEP 3: propensity score via ML with cross-fitting. Pre-treatment-period
   # features only -- see Details.
-  ps_feat_names <- c(if (has_bc) c("X_pre", W_names), Z_names)
+  ps_feat_names <- c(if (has_bc) c("bc_pre", bc_cov_names), x_names)
 
   if (length(ps_feat_names) == 0) {
     e_hat <- rep(p_hat, n)
   } else {
-    ps_features <- as.matrix(cs[, ps_feat_names, drop = FALSE])
+    ps_features <- as.matrix(wide_data[, ps_feat_names, drop = FALSE])
 
     fold_ids <- rep(NA_integer_, n)
     treated_idx <- which(D == 1)
     fold_ids[treated_idx] <- sample(rep(1:n_folds, length.out = length(treated_idx)))
-    fold_ids[control_idx] <- sample(rep(1:n_folds, length.out = length(control_idx)))
+    fold_ids[comparison_idx] <- sample(rep(1:n_folds, length.out = length(comparison_idx)))
 
     e_hat <- rep(NA_real_, n)
     for (k in 1:n_folds) {
@@ -236,7 +242,7 @@ dr_ml_attgt <- function(gt_data,
   inf_func <- psi
 
   extra_returns <- list(
-    group = this.g, time_period = this.tp,
+    group = this_g, time_period = this_tp,
     n_control = n0, n_treated = n1,
     est_method = "dr_ml",
     bad_control_var = bc_var, n_folds = n_folds
