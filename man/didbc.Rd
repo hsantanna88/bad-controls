@@ -16,6 +16,7 @@ didbc(
   bad_control_cov_formula = NULL,
   bad_control_d_cov_formula = NULL,
   est_method = c("imputation", "dr_ml"),
+  nuisance_method = c("ml", "parametric"),
   control_group = "notyettreated",
   anticipation = 0,
   base_period = "varying",
@@ -71,7 +72,13 @@ entered as a change (post minus pre) rather than a level. Default
 
 \item{est_method}{Estimation method: \code{"imputation"} (default) for
 the two-step imputation approach, or \code{"dr_ml"} for the doubly
-robust ML estimator.}
+robust estimator.}
+
+\item{nuisance_method}{For \code{est_method = "dr_ml"} only: \code{"ml"}
+(default) estimates the doubly robust estimator's nuisance functions
+via cross-fitted random forests; \code{"parametric"} estimates them via
+OLS/logistic regression, assuming correct specification. Ignored for
+\code{est_method = "imputation"}.}
 
 \item{control_group}{Which units serve as controls: \code{"notyettreated"}
 (default) or \code{"nevertreated"}. Passed to

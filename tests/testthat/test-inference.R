@@ -54,6 +54,37 @@ test_that("didbc imputation gives roughly correct coverage under DGP1", {
   expect_lt(coverage, 0.99)
 })
 
+test_that("didbc imputation gives roughly correct coverage with a binary bad control (DGP1)", {
+  testthat::skip_if_not(identical(Sys.getenv("BADCONTROLS_SLOW_TESTS"), "true"))
+
+  reps <- 200
+  n <- 500
+
+  one_rep <- function(r) {
+    sim <- simulate_bad_controls(
+      n = n, T_max = 2, groups = 2, dgp = "dgp1", beta_drift = 0,
+      binary_bad_control = TRUE, lambda = 1.2
+    )
+    res <- suppressMessages(suppressWarnings(didbc(
+      yname = "Y", gname = "G", tname = "period", idname = "id",
+      data = sim$data, bad_control_formula = ~X, xformula = ~Z,
+      bad_control_cov_formula = ~W,
+      est_method = "imputation", bstrap = FALSE, cband = FALSE, biters = 0
+    )))
+    est <- res$overall_att$overall.att
+    se <- res$overall_att$overall.se
+    crit <- res$overall_att$crit.val.egt
+    (sim$true_att_overall >= est - crit * se) && (sim$true_att_overall <= est + crit * se)
+  }
+
+  covered <- run_reps(one_rep, reps)
+  coverage <- mean(covered)
+  cat("\nImputation binary bad control (DGP1) coverage over", reps, "reps:", coverage, "\n")
+
+  expect_gt(coverage, 0.85)
+  expect_lt(coverage, 0.99)
+})
+
 test_that("didbc dr_ml gives roughly correct coverage under DGP2", {
   testthat::skip_if_not(identical(Sys.getenv("BADCONTROLS_SLOW_TESTS"), "true"))
 
@@ -81,5 +112,42 @@ test_that("didbc dr_ml gives roughly correct coverage under DGP2", {
   cat("\nDR/ML (DGP2) coverage over", reps, "reps:", coverage, "\n")
 
   expect_gt(coverage, 0.85)
+  expect_lt(coverage, 0.99)
+})
+
+# nuisance_method = "parametric" is not expected to have every nuisance
+# function exactly correctly specified even under DGP1 -- see the comment in
+# test-didbc.R and dev/NOTES.md for why p_2/omega_0 are only approximately
+# right in every DGP. The acceptance band here is wider than the "ml" tests
+# above for that reason; this is mainly a check that the analytical SEs
+# aren't badly miscalibrated, not a precise coverage claim.
+test_that("didbc dr_ml (parametric) gives roughly correct coverage under DGP1", {
+  testthat::skip_if_not(identical(Sys.getenv("BADCONTROLS_SLOW_TESTS"), "true"))
+
+  reps <- 200
+  n <- 500
+
+  one_rep <- function(r) {
+    sim <- simulate_bad_controls(
+      n = n, T_max = 2, groups = 2, dgp = "dgp1", beta_drift = 0
+    )
+    res <- suppressMessages(suppressWarnings(didbc(
+      yname = "Y", gname = "G", tname = "period", idname = "id",
+      data = sim$data, bad_control_formula = ~X, xformula = ~Z,
+      bad_control_cov_formula = ~W,
+      est_method = "dr_ml", nuisance_method = "parametric",
+      nfolds = 3, bstrap = FALSE, cband = FALSE, biters = 0
+    )))
+    est <- res$overall_att$overall.att
+    se <- res$overall_att$overall.se
+    crit <- res$overall_att$crit.val.egt
+    (sim$true_att_overall >= est - crit * se) && (sim$true_att_overall <= est + crit * se)
+  }
+
+  covered <- run_reps(one_rep, reps)
+  coverage <- mean(covered)
+  cat("\nDR/ML parametric (DGP1) coverage over", reps, "reps:", coverage, "\n")
+
+  expect_gt(coverage, 0.80)
   expect_lt(coverage, 0.99)
 })

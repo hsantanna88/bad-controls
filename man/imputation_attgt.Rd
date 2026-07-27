@@ -11,6 +11,7 @@ imputation_attgt(
   d_covs_formula = NULL,
   bad_control_cov_formula = NULL,
   bad_control_d_cov_formula = NULL,
+  bad_control_binary = FALSE,
   ...
 )
 }
@@ -37,6 +38,12 @@ old "lagged outcome as W" behavior). Default \code{NULL} (unused).}
 \item{bad_control_d_cov_formula}{Like \code{bad_control_cov_formula}, but
 entered as a change (post minus pre) rather than a level. Default
 \code{NULL} (unused).}
+
+\item{bad_control_binary}{Logical; whether the bad control is binary
+(detected automatically by \code{didbc()}). If \code{TRUE}, Step 1 (the
+bad-control evolution model) is fit by logistic regression instead of
+OLS, and the influence function is adjusted accordingly. The continuous
+case (\code{FALSE}, the default) is unaffected.}
 
 \item{...}{unused}
 }

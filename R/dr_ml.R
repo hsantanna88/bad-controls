@@ -1,13 +1,13 @@
-#' @title Doubly Robust ML Estimator for Bad Controls
+#' @title Doubly Robust Estimator for Bad Controls
 #'
 #' @description Implements the semiparametric doubly robust estimator from
-#'  Caetano, Callaway, Payne, and Sant'Anna with ML nuisance estimation
-#'  and K-fold cross-fitting. Estimates ATT(g,t) in the presence of
-#'  post-treatment covariates (bad controls).
+#'  Caetano, Callaway, Payne, and Sant'Anna, with nuisance functions
+#'  estimated either via machine learning or via parametric (linear/logit)
+#'  working models, and K-fold cross-fitting. Estimates ATT(g,t) in the
+#'  presence of post-treatment covariates (bad controls).
 #'
 #' @details Implements Algorithm 1 from the paper: four nuisance functions,
-#'  all estimated via random forests (`grf` package) with K-fold
-#'  cross-fitting:
+#'  with K-fold cross-fitting:
 #'  \itemize{
 #'    \item m_0(X_t*, X_t*-1, Z): outcome regression E[DeltaY | X_t*, X_t*-1,
 #'      Z, D=0]
@@ -20,14 +20,25 @@
 #'      among untreated units
 #'  }
 #'
+#'  \code{nuisance_method = "ml"} (the default) estimates all four via
+#'  cross-fitted random forests (\code{grf} package). \code{nuisance_method
+#'  = "parametric"} estimates m_0/nu_0/omega_0 via OLS and p_2 via logistic
+#'  regression; this assumes all four working models are correctly
+#'  specified, in which case the doubly robust score's Neyman orthogonality
+#'  means no further correction to the influence function is needed beyond
+#'  what is already here for either choice of \code{nuisance_method} --
+#'  parametric estimators converge faster than the ML rate conditions this
+#'  orthogonality argument requires. Cross-fitting is retained under
+#'  \code{"parametric"} for a single, shared code path, even though it is
+#'  not required for validity there.
+#'
 #'  Unlike the imputation estimator, no counterfactual imputation of the bad
 #'  control is needed: X_t* is observed directly for untreated units (X_t* =
 #'  X_t*(0)), and nu_0/omega_0 target m_0's/p_2's fitted values through a
 #'  second regression rather than plugging in a predicted X_t*(0).
 #'
 #'  The doubly robust score is consistent if either (m_0, nu_0) or (p_2,
-#'  omega_0) are correctly specified. Cross-fitting ensures valid inference
-#'  with ML first-stage estimation.
+#'  omega_0) are correctly specified.
 #'
 #' @param gt_data data.frame from \code{ptetools::two_by_two_subset} with
 #'   columns id, D, period, name (pre/post), Y, plus covariate columns
@@ -49,6 +60,10 @@
 #' @param bad_control_d_cov_formula Like \code{bad_control_cov_formula}, but
 #'   entered as a change; used only in the outcome regression, not the
 #'   propensity score. Default \code{NULL} (unused).
+#' @param nuisance_method \code{"ml"} (default) estimates all four nuisance
+#'   functions via cross-fitted random forests; \code{"parametric"}
+#'   estimates them via OLS/logistic regression, assuming correct
+#'   specification. See Details.
 #' @param n_folds number of cross-fitting folds (default 5)
 #' @param trim_ps propensity score trimming threshold (default 0.01)
 #' @param ... additional arguments (unused)
@@ -69,12 +84,15 @@ dr_ml_attgt <- function(gt_data,
                         d_covs_formula = NULL,
                         bad_control_cov_formula = NULL,
                         bad_control_d_cov_formula = NULL,
+                        nuisance_method = c("ml", "parametric"),
                         n_folds = 5,
                         trim_ps = 0.01,
                         ...) {
 
-  if (!requireNamespace("grf", quietly = TRUE)) {
-    stop("Package 'grf' required for est_method='dr_ml'. ",
+  nuisance_method <- match.arg(nuisance_method)
+
+  if (nuisance_method == "ml" && !requireNamespace("grf", quietly = TRUE)) {
+    stop("Package 'grf' required for nuisance_method='ml'. ",
          "Install with: install.packages('grf')")
   }
 
@@ -159,7 +177,7 @@ dr_ml_attgt <- function(gt_data,
   # covariates, in levels or as changes -- the same regressor sets used for
   # the analogous steps in imputation_attgt().
   m_feat_names <- c("bc_post", "bc_pre", dx_names, x_names)
-  p_feat_names <- c("bc_pre", bc_cov_names, bc_dcov_names, x_names)
+  p_feat_names <- c("bc_pre", bc_cov_names, bc_dcov_names, dx_names, x_names)
 
   m_features <- as.matrix(wide_data[, m_feat_names, drop = FALSE])
   p_features <- as.matrix(wide_data[, p_feat_names, drop = FALSE])
@@ -186,28 +204,28 @@ dr_ml_attgt <- function(gt_data,
 
     # First stage (Algorithm 1, step 2a): m_0 on untreated units, p_2 on all
     # units.
-    m_forest <- grf::regression_forest(X = m_features_train_comp, Y = DeltaY[train_comp_idx])
-    p_forest <- grf::probability_forest(
-      X = p_features[train_idx, , drop = FALSE], Y = as.factor(D[train_idx])
+    m_fit <- fit_reg_nuisance(m_features_train_comp, DeltaY[train_comp_idx], nuisance_method)
+    p_fit <- fit_prop_nuisance(
+      p_features[train_idx, , drop = FALSE], D[train_idx], nuisance_method
     )
 
     # Second stage (Algorithm 1, step 2b): nu_0 regresses m_0's in-sample
     # fitted values on (X_t*-1, W, Z); omega_0 regresses p_2's in-sample
     # fitted odds ratio on (X_t*, X_t*-1, Z) -- both among untreated units
     # in the training fold.
-    m_fitted_train <- predict(m_forest, newdata = m_features_train_comp)$predictions
-    nu_forest <- grf::regression_forest(X = p_features_train_comp, Y = m_fitted_train)
+    m_fitted_train <- predict_reg_nuisance(m_fit, m_features_train_comp, nuisance_method)
+    nu_fit <- fit_reg_nuisance(p_features_train_comp, m_fitted_train, nuisance_method)
 
-    p_fitted_train <- predict(p_forest, newdata = p_features_train_comp)$predictions[, 2]
+    p_fitted_train <- predict_prop_nuisance(p_fit, p_features_train_comp, nuisance_method)
     p_fitted_train <- pmin(pmax(p_fitted_train, trim_ps), 1 - trim_ps)
     odds_fitted_train <- p_fitted_train / (1 - p_fitted_train)
-    omega_forest <- grf::regression_forest(X = m_features_train_comp, Y = odds_fitted_train)
+    omega_fit <- fit_reg_nuisance(m_features_train_comp, odds_fitted_train, nuisance_method)
 
     # Evaluate all four nuisance functions on the held-out fold (step 3).
-    m_hat[eval_idx] <- predict(m_forest, newdata = m_features_eval)$predictions
-    nu_hat[eval_idx] <- predict(nu_forest, newdata = p_features_eval)$predictions
-    p_hat[eval_idx] <- predict(p_forest, newdata = p_features_eval)$predictions[, 2]
-    omega_hat[eval_idx] <- predict(omega_forest, newdata = m_features_eval)$predictions
+    m_hat[eval_idx] <- predict_reg_nuisance(m_fit, m_features_eval, nuisance_method)
+    nu_hat[eval_idx] <- predict_reg_nuisance(nu_fit, p_features_eval, nuisance_method)
+    p_hat[eval_idx] <- predict_prop_nuisance(p_fit, p_features_eval, nuisance_method)
+    omega_hat[eval_idx] <- predict_reg_nuisance(omega_fit, m_features_eval, nuisance_method)
   }
 
   # Trim propensity scores
@@ -227,10 +245,48 @@ dr_ml_attgt <- function(gt_data,
   extra_returns <- list(
     group = this_g, time_period = this_tp,
     n_control = n0, n_treated = n1,
-    est_method = "dr_ml",
+    est_method = "dr_ml", nuisance_method = nuisance_method,
     bad_control_var = bc_var, n_folds = n_folds
   )
 
   ptetools::attgt_if(attgt = att_dr, inf_func = inf_func,
                 extra_gt_returns = extra_returns)
+}
+
+# Fit a regression nuisance function (m_0, nu_0, or omega_0): a cross-fitted
+# random forest under nuisance_method = "ml", or OLS under
+# nuisance_method = "parametric".
+fit_reg_nuisance <- function(x_mat, y, nuisance_method) {
+  if (nuisance_method == "ml") {
+    return(grf::regression_forest(X = x_mat, Y = y))
+  }
+  df <- data.frame(x_mat)
+  df$.y <- y
+  stats::lm(.y ~ ., data = df)
+}
+
+predict_reg_nuisance <- function(fit, newdata_mat, nuisance_method) {
+  if (nuisance_method == "ml") {
+    return(predict(fit, newdata = newdata_mat)$predictions)
+  }
+  stats::predict(fit, newdata = data.frame(newdata_mat))
+}
+
+# Fit the propensity score p_2: a cross-fitted random forest under
+# nuisance_method = "ml", or logistic regression under
+# nuisance_method = "parametric".
+fit_prop_nuisance <- function(x_mat, d, nuisance_method) {
+  if (nuisance_method == "ml") {
+    return(grf::probability_forest(X = x_mat, Y = as.factor(d)))
+  }
+  df <- data.frame(x_mat)
+  df$.d <- d
+  stats::glm(.d ~ ., data = df, family = stats::binomial())
+}
+
+predict_prop_nuisance <- function(fit, newdata_mat, nuisance_method) {
+  if (nuisance_method == "ml") {
+    return(predict(fit, newdata = newdata_mat)$predictions[, 2])
+  }
+  stats::predict(fit, newdata = data.frame(newdata_mat), type = "response")
 }

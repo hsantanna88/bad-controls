@@ -2,7 +2,7 @@
 % Please edit documentation in R/dr_ml.R
 \name{dr_ml_attgt}
 \alias{dr_ml_attgt}
-\title{Doubly Robust ML Estimator for Bad Controls}
+\title{Doubly Robust Estimator for Bad Controls}
 \usage{
 dr_ml_attgt(
   gt_data,
@@ -11,6 +11,7 @@ dr_ml_attgt(
   d_covs_formula = NULL,
   bad_control_cov_formula = NULL,
   bad_control_d_cov_formula = NULL,
+  nuisance_method = c("ml", "parametric"),
   n_folds = 5,
   trim_ps = 0.01,
   ...
@@ -43,6 +44,11 @@ Default \code{NULL} (unused, ignored if \code{bad_control_formula} is
 entered as a change; used only in the outcome regression, not the
 propensity score. Default \code{NULL} (unused).}
 
+\item{nuisance_method}{\code{"ml"} (default) estimates all four nuisance
+functions via cross-fitted random forests; \code{"parametric"}
+estimates them via OLS/logistic regression, assuming correct
+specification. See Details.}
+
 \item{n_folds}{number of cross-fitting folds (default 5)}
 
 \item{trim_ps}{propensity score trimming threshold (default 0.01)}
@@ -54,14 +60,14 @@ propensity score. Default \code{NULL} (unused).}
 }
 \description{
 Implements the semiparametric doubly robust estimator from
-Caetano, Callaway, Payne, and Sant'Anna with ML nuisance estimation
-and K-fold cross-fitting. Estimates ATT(g,t) in the presence of
-post-treatment covariates (bad controls).
+Caetano, Callaway, Payne, and Sant'Anna, with nuisance functions
+estimated either via machine learning or via parametric (linear/logit)
+working models, and K-fold cross-fitting. Estimates ATT(g,t) in the
+presence of post-treatment covariates (bad controls).
 }
 \details{
 Implements Algorithm 1 from the paper: four nuisance functions,
-all estimated via random forests (\code{grf} package) with K-fold
-cross-fitting:
+with K-fold cross-fitting:
 \itemize{
 \item m_0(X_t*, X_t*-1, Z): outcome regression E\link[=DeltaY | X_t*, X_t*-1,
      Z, D=0]{DeltaY | X_t*, X_t*-1, Z, D=0}
@@ -74,14 +80,25 @@ regression of the fitted propensity odds ratio on (X_t*, X_t*-1, Z)
 among untreated units
 }
 
+\code{nuisance_method = "ml"} (the default) estimates all four via
+cross-fitted random forests (\code{grf} package). \code{nuisance_method
+ = "parametric"} estimates m_0/nu_0/omega_0 via OLS and p_2 via logistic
+regression; this assumes all four working models are correctly
+specified, in which case the doubly robust score's Neyman orthogonality
+means no further correction to the influence function is needed beyond
+what is already here for either choice of \code{nuisance_method} --
+parametric estimators converge faster than the ML rate conditions this
+orthogonality argument requires. Cross-fitting is retained under
+\code{"parametric"} for a single, shared code path, even though it is
+not required for validity there.
+
 Unlike the imputation estimator, no counterfactual imputation of the bad
 control is needed: X_t* is observed directly for untreated units (X_t* =
 X_t*(0)), and nu_0/omega_0 target m_0's/p_2's fitted values through a
 second regression rather than plugging in a predicted X_t*(0).
 
 The doubly robust score is consistent if either (m_0, nu_0) or (p_2,
-omega_0) are correctly specified. Cross-fitting ensures valid inference
-with ML first-stage estimation.
+omega_0) are correctly specified.
 }
 \references{
 Caetano, C., Callaway, B., Payne, S., and Sant'Anna, H. (2024).

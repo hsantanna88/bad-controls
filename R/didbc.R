@@ -34,7 +34,12 @@
 #'   \code{NULL} (unused).
 #' @param est_method Estimation method: \code{"imputation"} (default) for
 #'   the two-step imputation approach, or \code{"dr_ml"} for the doubly
-#'   robust ML estimator.
+#'   robust estimator.
+#' @param nuisance_method For \code{est_method = "dr_ml"} only: \code{"ml"}
+#'   (default) estimates the doubly robust estimator's nuisance functions
+#'   via cross-fitted random forests; \code{"parametric"} estimates them via
+#'   OLS/logistic regression, assuming correct specification. Ignored for
+#'   \code{est_method = "imputation"}.
 #' @param control_group Which units serve as controls: \code{"notyettreated"}
 #'   (default) or \code{"nevertreated"}. Passed to
 #'   \code{ptetools::two_by_two_subset}.
@@ -119,6 +124,7 @@ didbc <- function(yname,
                   bad_control_cov_formula = NULL,
                   bad_control_d_cov_formula = NULL,
                   est_method = c("imputation", "dr_ml"),
+                  nuisance_method = c("ml", "parametric"),
                   control_group = "notyettreated",
                   anticipation = 0,
                   base_period = "varying",
@@ -137,6 +143,7 @@ didbc <- function(yname,
 
   # Validate bad_control_formula once here, at the entry point, rather than
   # inside each (g,t) cell in imputation_attgt()/dr_ml_attgt().
+  bad_control_binary <- FALSE
   if (!is.null(bad_control_formula)) {
     bc_vars <- all.vars(bad_control_formula)
     if (length(bc_vars) != 1) {
@@ -146,6 +153,11 @@ didbc <- function(yname,
       )
     }
     bc_var <- bc_vars[1]
+
+    # Detect a binary bad control automatically (exactly two distinct
+    # values), rather than requiring the user to say so. Currently only
+    # affects imputation_attgt(); see dev/NOTES.md.
+    bad_control_binary <- length(unique(data[[bc_var]])) == 2
 
     # Warn (not error) if the bad control shows no real time variation for
     # any unit in the panel -- a constant "bad control" isn't really one,
@@ -170,6 +182,7 @@ didbc <- function(yname,
         d_covs_formula = d_covs_formula,
         bad_control_cov_formula = bad_control_cov_formula,
         bad_control_d_cov_formula = bad_control_d_cov_formula,
+        nuisance_method = nuisance_method,
         n_folds = nfolds,
         trim_ps = trim_ps
       )
@@ -182,7 +195,8 @@ didbc <- function(yname,
         bad_control_formula = bad_control_formula,
         d_covs_formula = d_covs_formula,
         bad_control_cov_formula = bad_control_cov_formula,
-        bad_control_d_cov_formula = bad_control_d_cov_formula
+        bad_control_d_cov_formula = bad_control_d_cov_formula,
+        bad_control_binary = bad_control_binary
       )
     }
   }

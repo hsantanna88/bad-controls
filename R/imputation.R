@@ -17,6 +17,11 @@
 #' @param bad_control_d_cov_formula Like \code{bad_control_cov_formula}, but
 #'   entered as a change (post minus pre) rather than a level. Default
 #'   \code{NULL} (unused).
+#' @param bad_control_binary Logical; whether the bad control is binary
+#'   (detected automatically by \code{didbc()}). If \code{TRUE}, Step 1 (the
+#'   bad-control evolution model) is fit by logistic regression instead of
+#'   OLS, and the influence function is adjusted accordingly. The continuous
+#'   case (\code{FALSE}, the default) is unaffected.
 #' @param ... unused
 #' @keywords internal
 imputation_attgt <- function(gt_data,
@@ -25,6 +30,7 @@ imputation_attgt <- function(gt_data,
                              d_covs_formula = NULL,
                              bad_control_cov_formula = NULL,
                              bad_control_d_cov_formula = NULL,
+                             bad_control_binary = FALSE,
                              ...) {
   # Separate pre and post, pivot to wide (one row per unit, pre/post as
   # separate columns)
@@ -96,12 +102,21 @@ imputation_attgt <- function(gt_data,
   wide_data$bc_pre <- pre_data[[bc_var]][match(wide_data$id, pre_data$id)]
   wide_data$bc_post <- post_data[[bc_var]][match(wide_data$id, post_data$id)]
 
-  # Step 1: impute untreated potential covariate
-  imp_rhs <- c("bc_pre", bc_cov_names, bc_dcov_names, x_names)
+  # Step 1: impute untreated potential covariate. Binary bad control: logit
+  # (Lambda(S'gamma) in eq:ra-x-evol's generalization); continuous: OLS, as
+  # before. `type = "response"` is valid for both lm and glm predict/residual
+  # methods, so it is used unconditionally below rather than branching.
+  imp_rhs <- c("bc_pre", bc_cov_names, bc_dcov_names, dx_names, x_names)
   imp_fml <- stats::reformulate(imp_rhs, response = "bc_post")
-  imp_fit <- stats::lm(imp_fml, data = wide_data[comparison_idx, ])
+  imp_fit <- if (bad_control_binary) {
+    stats::glm(imp_fml, data = wide_data[comparison_idx, ], family = stats::binomial())
+  } else {
+    stats::lm(imp_fml, data = wide_data[comparison_idx, ])
+  }
   wide_data$bc_post_imp <- ifelse(
-    D == 1, stats::predict(imp_fit, newdata = wide_data), wide_data$bc_post
+    D == 1,
+    stats::predict(imp_fit, newdata = wide_data, type = "response"),
+    wide_data$bc_post
   )
 
   # Step 2: impute untreated potential outcomes
@@ -126,20 +141,39 @@ imputation_attgt <- function(gt_data,
   r_mat <- stats::model.matrix(reg_fit) # R_i, comparison rows
   u <- stats::residuals(reg_fit) # u_i = DeltaY_i - R_i'beta
   s_mat <- stats::model.matrix(imp_fit) # S_i, comparison rows
-  v <- stats::residuals(imp_fit) # v_i = bc_post_i - S_i'gamma
+  v <- stats::residuals(imp_fit, type = "response") # v_i = bc_post_i - E-hat[bc_post_i | S_i]
+
+  # Step 1's Fisher-information weight: 1 for OLS (continuous bad control).
+  # LOGIT-SPECIFIC below: for a binary bad control, this is the Bernoulli
+  # variance at the fitted probability, w_i = p_i(1-p_i) -- the canonical
+  # logit link's Fisher information happens to equal its variance function,
+  # which is why `imp_fit$weights` (glm's converged IRLS weights) already
+  # holds exactly this. A different link (e.g. probit) would need a
+  # different weight here, not just a different `imp_fit` model call.
+  s_weight <- if (bad_control_binary) imp_fit$weights else rep(1, nrow(s_mat))
 
   sigma_r <- crossprod(r_mat) / n0
-  sigma_s <- crossprod(s_mat) / n0
+  sigma_s <- crossprod(s_mat, s_mat * s_weight) / n0
 
   # R-tilde_i and S_i evaluated at treated units: for treated rows
-  # "bc_post_imp" already equals the fitted counterfactual S_i'gamma-hat, so
-  # the reg_fit design matrix evaluated there is exactly R-tilde.
+  # "bc_post_imp" already equals the fitted counterfactual E-hat[bc_post_i |
+  # S_i], so the reg_fit design matrix evaluated there is exactly R-tilde.
   r_mat_treated <- stats::model.matrix(out_fml, data = wide_data[D == 1, , drop = FALSE])
   s_mat_treated <- stats::model.matrix(imp_fml, data = wide_data[D == 1, , drop = FALSE])
   beta1_hat <- stats::coef(reg_fit)["bc_post_imp"]
 
+  # LOGIT-SPECIFIC: the same w_i weight, now evaluated at treated units' own
+  # S_i, enters here via the chain rule when linearizing Lambda(S'gamma) --
+  # see the theory note for eq:nu-linearize's generalization. 1 for OLS.
+  if (bad_control_binary) {
+    p_treated <- stats::predict(imp_fit, newdata = wide_data[D == 1, , drop = FALSE], type = "response")
+    w_treated <- p_treated * (1 - p_treated)
+  } else {
+    w_treated <- rep(1, nrow(s_mat_treated))
+  }
+
   kappa_r <- solve(sigma_r, colMeans(r_mat_treated))
-  kappa_s <- solve(sigma_s, beta1_hat * colMeans(s_mat_treated))
+  kappa_s <- solve(sigma_s, beta1_hat * colMeans(s_mat_treated * w_treated))
 
   correction <- as.numeric(r_mat %*% kappa_r) * u + as.numeric(s_mat %*% kappa_s) * v
 
