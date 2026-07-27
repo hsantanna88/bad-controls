@@ -12,8 +12,9 @@ dr_ml_attgt(
   bad_control_cov_formula = NULL,
   bad_control_d_cov_formula = NULL,
   nuisance_method = c("ml", "parametric"),
+  bad_control_binary = FALSE,
+  overlap_threshold = 0.99,
   n_folds = 5,
-  trim_ps = 0.01,
   ...
 )
 }
@@ -49,9 +50,17 @@ functions via cross-fitted random forests; \code{"parametric"}
 estimates them via OLS/logistic regression, assuming correct
 specification. See Details.}
 
-\item{n_folds}{number of cross-fitting folds (default 5)}
+\item{bad_control_binary}{Logical; whether the bad control is binary
+(detected automatically by \code{didbc()}). Unused by
+\code{dr_ml_attgt()} itself (the bad control never appears as a
+modeled response here), but passed through to \code{imputation_attgt()}
+in case of a fallback on overlap; see Details.}
 
-\item{trim_ps}{propensity score trimming threshold (default 0.01)}
+\item{overlap_threshold}{If any unit's fitted propensity (from a
+preliminary, non-cross-fit fit) exceeds this value, estimation falls
+back to \code{imputation_attgt()} for that (g,t) cell. Default 0.99.}
+
+\item{n_folds}{number of cross-fitting folds (default 5)}
 
 \item{...}{additional arguments (unused)}
 }
@@ -99,6 +108,16 @@ second regression rather than plugging in a predicted X_t*(0).
 
 The doubly robust score is consistent if either (m_0, nu_0) or (p_2,
 omega_0) are correctly specified.
+
+Before cross-fitting, a preliminary propensity model (not used in the
+final estimation) is fit once on the whole cell to check overlap: if any
+unit's fitted propensity exceeds \code{overlap_threshold}, a warning
+names the group, time period, and offending unit IDs, and estimation
+falls back to \code{imputation_attgt()} for that (g,t) cell entirely,
+rather than dropping p_2/omega_0 alone -- doing that would leave a
+moment that is not Neyman orthogonal, which is exactly why
+\code{imputation_attgt()} needs its own first-stage correction terms
+that this function's nuisances don't have.
 }
 \references{
 Caetano, C., Callaway, B., Payne, S., and Sant'Anna, H. (2024).

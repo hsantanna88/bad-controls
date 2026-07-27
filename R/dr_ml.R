@@ -40,6 +40,16 @@
 #'  The doubly robust score is consistent if either (m_0, nu_0) or (p_2,
 #'  omega_0) are correctly specified.
 #'
+#'  Before cross-fitting, a preliminary propensity model (not used in the
+#'  final estimation) is fit once on the whole cell to check overlap: if any
+#'  unit's fitted propensity exceeds \code{overlap_threshold}, a warning
+#'  names the group, time period, and offending unit IDs, and estimation
+#'  falls back to \code{imputation_attgt()} for that (g,t) cell entirely,
+#'  rather than dropping p_2/omega_0 alone -- doing that would leave a
+#'  moment that is not Neyman orthogonal, which is exactly why
+#'  \code{imputation_attgt()} needs its own first-stage correction terms
+#'  that this function's nuisances don't have.
+#'
 #' @param gt_data data.frame from \code{ptetools::two_by_two_subset} with
 #'   columns id, D, period, name (pre/post), Y, plus covariate columns
 #' @param xformula One-sided formula for general exogenous covariates,
@@ -64,8 +74,15 @@
 #'   functions via cross-fitted random forests; \code{"parametric"}
 #'   estimates them via OLS/logistic regression, assuming correct
 #'   specification. See Details.
+#' @param bad_control_binary Logical; whether the bad control is binary
+#'   (detected automatically by \code{didbc()}). Unused by
+#'   \code{dr_ml_attgt()} itself (the bad control never appears as a
+#'   modeled response here), but passed through to \code{imputation_attgt()}
+#'   in case of a fallback on overlap; see Details.
+#' @param overlap_threshold If any unit's fitted propensity (from a
+#'   preliminary, non-cross-fit fit) exceeds this value, estimation falls
+#'   back to \code{imputation_attgt()} for that (g,t) cell. Default 0.99.
 #' @param n_folds number of cross-fitting folds (default 5)
-#' @param trim_ps propensity score trimming threshold (default 0.01)
 #' @param ... additional arguments (unused)
 #'
 #' @return \code{attgt_if} object with ATT estimate and influence function
@@ -85,8 +102,9 @@ dr_ml_attgt <- function(gt_data,
                         bad_control_cov_formula = NULL,
                         bad_control_d_cov_formula = NULL,
                         nuisance_method = c("ml", "parametric"),
+                        bad_control_binary = FALSE,
+                        overlap_threshold = 0.99,
                         n_folds = 5,
-                        trim_ps = 0.01,
                         ...) {
 
   nuisance_method <- match.arg(nuisance_method)
@@ -182,6 +200,33 @@ dr_ml_attgt <- function(gt_data,
   m_features <- as.matrix(wide_data[, m_feat_names, drop = FALSE])
   p_features <- as.matrix(wide_data[, p_feat_names, drop = FALSE])
 
+  # Overlap check (not cross-fit -- a preliminary diagnostic fit, never used
+  # in the final estimation). Uses the same nuisance_method as the real
+  # estimation (forest or logit), since the point is to ask whether *this*
+  # estimation is going to run into an overlap problem, not a generic proxy.
+  # If violated, fall back to imputation_attgt() for the whole cell rather
+  # than dropping p_2/omega_0 alone -- see Details for why.
+  overlap_fit <- fit_prop_nuisance(p_features, D, nuisance_method)
+  overlap_p <- predict_prop_nuisance(overlap_fit, p_features, nuisance_method)
+  overlap_violation <- overlap_p > overlap_threshold
+  if (any(overlap_violation)) {
+    warning(
+      "Overlap violated for group ", this_g, " in time period ", this_tp,
+      ": unit(s) ", paste(wide_data$id[overlap_violation], collapse = ", "),
+      " have estimated propensity above ", overlap_threshold,
+      "; falling back to the imputation estimator for this (g,t) cell."
+    )
+    return(imputation_attgt(
+      gt_data = gt_data,
+      xformula = xformula,
+      bad_control_formula = bad_control_formula,
+      d_covs_formula = d_covs_formula,
+      bad_control_cov_formula = bad_control_cov_formula,
+      bad_control_d_cov_formula = bad_control_d_cov_formula,
+      bad_control_binary = bad_control_binary
+    ))
+  }
+
   fold_ids <- rep(NA_integer_, n)
   treated_idx <- which(D == 1)
   fold_ids[treated_idx] <- sample(rep(1:n_folds, length.out = length(treated_idx)))
@@ -217,7 +262,6 @@ dr_ml_attgt <- function(gt_data,
     nu_fit <- fit_reg_nuisance(p_features_train_comp, m_fitted_train, nuisance_method)
 
     p_fitted_train <- predict_prop_nuisance(p_fit, p_features_train_comp, nuisance_method)
-    p_fitted_train <- pmin(pmax(p_fitted_train, trim_ps), 1 - trim_ps)
     odds_fitted_train <- p_fitted_train / (1 - p_fitted_train)
     omega_fit <- fit_reg_nuisance(m_features_train_comp, odds_fitted_train, nuisance_method)
 
@@ -227,9 +271,6 @@ dr_ml_attgt <- function(gt_data,
     p_hat[eval_idx] <- predict_prop_nuisance(p_fit, p_features_eval, nuisance_method)
     omega_hat[eval_idx] <- predict_reg_nuisance(omega_fit, m_features_eval, nuisance_method)
   }
-
-  # Trim propensity scores
-  p_hat <- pmin(pmax(p_hat, trim_ps), 1 - trim_ps)
 
   # Doubly robust score (eqn:eif1 / eq:att-dr-sample in the paper)
   phi1 <- (D / pi_hat) * DeltaY - (D / pi_hat) * nu_hat -

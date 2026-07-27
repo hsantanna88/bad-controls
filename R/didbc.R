@@ -63,7 +63,11 @@
 #'   (default 1)
 #' @param biters Number of bootstrap iterations (default 100)
 #' @param nfolds Number of cross-fitting folds for DR/ML (default 5)
-#' @param trim_ps Propensity score trimming threshold for DR/ML (default 0.01)
+#' @param overlap_threshold For \code{est_method = "dr_ml"} only: if any
+#'   unit's fitted propensity (from a preliminary, non-cross-fit fit)
+#'   exceeds this value in a (g,t) cell, estimation falls back to the
+#'   imputation estimator for that cell, with a warning naming the group,
+#'   time period, and offending unit IDs. Default 0.99.
 #' @param ... Additional arguments passed to \code{ptetools::pte}
 #'
 #' @return A \code{pte_results} object containing:
@@ -136,7 +140,7 @@ didbc <- function(yname,
                   cl = 1,
                   biters = 100,
                   nfolds = 5,
-                  trim_ps = 0.01,
+                  overlap_threshold = 0.99,
                   ...) {
 
   est_method <- match.arg(est_method)
@@ -183,8 +187,9 @@ didbc <- function(yname,
         bad_control_cov_formula = bad_control_cov_formula,
         bad_control_d_cov_formula = bad_control_d_cov_formula,
         nuisance_method = nuisance_method,
-        n_folds = nfolds,
-        trim_ps = trim_ps
+        bad_control_binary = bad_control_binary,
+        overlap_threshold = overlap_threshold,
+        n_folds = nfolds
       )
     }
   } else {

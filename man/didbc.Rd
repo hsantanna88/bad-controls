@@ -28,7 +28,7 @@ didbc(
   cl = 1,
   biters = 100,
   nfolds = 5,
-  trim_ps = 0.01,
+  overlap_threshold = 0.99,
   ...
 )
 }
@@ -114,7 +114,11 @@ pointwise confidence intervals (default \code{TRUE})}
 
 \item{nfolds}{Number of cross-fitting folds for DR/ML (default 5)}
 
-\item{trim_ps}{Propensity score trimming threshold for DR/ML (default 0.01)}
+\item{overlap_threshold}{For \code{est_method = "dr_ml"} only: if any
+unit's fitted propensity (from a preliminary, non-cross-fit fit)
+exceeds this value in a (g,t) cell, estimation falls back to the
+imputation estimator for that cell, with a warning naming the group,
+time period, and offending unit IDs. Default 0.99.}
 
 \item{...}{Additional arguments passed to \code{ptetools::pte}}
 }
