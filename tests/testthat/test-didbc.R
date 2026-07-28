@@ -28,6 +28,25 @@ test_that("didbc imputation recovers true ATT under DGP1 (linear W)", {
   expect_equal(res$overall_att$overall.att, sim$true_att_overall, tolerance = 0.05)
 })
 
+test_that("didbc imputation (did) recovers true ATT under DGP4 (parallel trends for X)", {
+  # DGP4 is constructed so that parallel trends for the bad control given
+  # (W,Z) holds exactly (unlike DGP1/2/3/stress, which are calibrated to
+  # match the paper's actual Monte Carlo designs and satisfy Covariate
+  # Unconfoundedness, not this assumption) -- see ?simulate_bad_controls.
+  set.seed(1)
+  sim <- simulate_bad_controls(
+    n = 4000, T_max = 2, groups = 2, dgp = "dgp4", beta_drift = 0
+  )
+  res <- suppressWarnings(didbc(
+    yname = "Y", gname = "G", tname = "period", idname = "id",
+    data = sim$data, bad_control_formula = ~X, xformula = ~Z,
+    bad_control_cov_formula = ~W,
+    est_method = "imputation", bad_control_identification_strategy = "did",
+    biters = 0
+  ))
+  expect_equal(res$overall_att$overall.att, sim$true_att_overall, tolerance = 0.05)
+})
+
 test_that("didbc imputation recovers true ATT with a binary bad control (DGP1)", {
   # DGP1 + binary_bad_control = TRUE is the case where the binary Step 1
   # (logistic regression) is correctly specified -- see

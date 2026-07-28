@@ -35,6 +35,15 @@
 #' @param est_method Estimation method: \code{"imputation"} (default) for
 #'   the two-step imputation approach, or \code{"dr_ml"} for the doubly
 #'   robust estimator.
+#' @param bad_control_identification_strategy Which assumption identifies
+#'   the bad control's untreated potential evolution: \code{"unconfoundedness"}
+#'   (default), i.e. Covariate Unconfoundedness for the bad control given
+#'   its own pre-period level and \code{(W, Z)}, or \code{"did"}, i.e.
+#'   parallel trends for the bad control itself given \code{(W, Z)}
+#'   (`app:bad-control-parallel-trends` in the supplementary appendix).
+#'   \code{"did"} is only supported for \code{est_method = "imputation"},
+#'   requires \code{bad_control_formula} to be non-\code{NULL}, and does not
+#'   distinguish a binary bad control.
 #' @param nuisance_method For \code{est_method = "dr_ml"} only: \code{"ml"}
 #'   (default) estimates the doubly robust estimator's nuisance functions
 #'   via cross-fitted random forests; \code{"parametric"} estimates them via
@@ -138,6 +147,7 @@ didbc <- function(yname,
                   bad_control_cov_formula = NULL,
                   bad_control_d_cov_formula = NULL,
                   est_method = c("imputation", "dr_ml"),
+                  bad_control_identification_strategy = c("unconfoundedness", "did"),
                   nuisance_method = c("ml", "parametric"),
                   control_group = "notyettreated",
                   anticipation = 0,
@@ -155,6 +165,14 @@ didbc <- function(yname,
                   ...) {
 
   est_method <- match.arg(est_method)
+  bad_control_identification_strategy <- match.arg(bad_control_identification_strategy)
+
+  if (bad_control_identification_strategy == "did" && est_method == "dr_ml") {
+    stop(
+      "bad_control_identification_strategy = \"did\" is only supported ",
+      "for est_method = \"imputation\"."
+    )
+  }
 
   # Validate bad_control_formula once here, at the entry point, rather than
   # inside each (g,t) cell in imputation_attgt()/dr_ml_attgt().
@@ -213,7 +231,8 @@ didbc <- function(yname,
         d_covs_formula = d_covs_formula,
         bad_control_cov_formula = bad_control_cov_formula,
         bad_control_d_cov_formula = bad_control_d_cov_formula,
-        bad_control_binary = bad_control_binary
+        bad_control_binary = bad_control_binary,
+        bad_control_identification_strategy = bad_control_identification_strategy
       )
     }
   }

@@ -169,15 +169,9 @@ dr_ml_attgt <- function(gt_data,
   D <- wide_data$D # re-extract after merge
 
   # --- general exogenous covariates entered as a change ---
-  dx_names <- character(0)
-  if (!is.null(d_covs_formula)) {
-    dcov_vars <- all.vars(d_covs_formula)
-    for (v in dcov_vars) {
-      wide_data[[paste0("d_", v)]] <- post_data[[v]][match(wide_data$id, post_data$id)] -
-        pre_data[[v]][match(wide_data$id, pre_data$id)]
-    }
-    dx_names <- paste0("d_", dcov_vars)
-  }
+  dcov_result <- add_diff_covariates(wide_data, pre_data, post_data, d_covs_formula, "d_")
+  wide_data <- dcov_result$wide_data
+  dx_names <- dcov_result$names
 
   # --- bc_cov: auxiliary covariates for modeling the bad control, pre-period
   # level (W in the paper) ---
@@ -191,15 +185,9 @@ dr_ml_attgt <- function(gt_data,
   }
 
   # --- bc_cov entered as a change instead of a level ---
-  bc_dcov_names <- character(0)
-  if (!is.null(bad_control_d_cov_formula)) {
-    bc_dcov_vars <- all.vars(bad_control_d_cov_formula)
-    for (v in bc_dcov_vars) {
-      wide_data[[paste0("bc_dcov_", v)]] <- post_data[[v]][match(wide_data$id, post_data$id)] -
-        pre_data[[v]][match(wide_data$id, pre_data$id)]
-    }
-    bc_dcov_names <- paste0("bc_dcov_", bc_dcov_vars)
-  }
+  bc_dcov_result <- add_diff_covariates(wide_data, pre_data, post_data, bad_control_d_cov_formula, "bc_dcov_")
+  wide_data <- bc_dcov_result$wide_data
+  bc_dcov_names <- bc_dcov_result$names
 
   n <- nrow(wide_data)
   n1 <- sum(D)

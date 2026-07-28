@@ -12,6 +12,7 @@ imputation_attgt(
   bad_control_cov_formula = NULL,
   bad_control_d_cov_formula = NULL,
   bad_control_binary = FALSE,
+  bad_control_identification_strategy = c("unconfoundedness", "did"),
   ...
 )
 }
@@ -43,11 +44,28 @@ entered as a change (post minus pre) rather than a level. Default
 (detected automatically by \code{didbc()}). If \code{TRUE}, Step 1 (the
 bad-control evolution model) is fit by logistic regression instead of
 OLS, and the influence function is adjusted accordingly. The continuous
-case (\code{FALSE}, the default) is unaffected.}
+case (\code{FALSE}, the default) is unaffected. Ignored when
+\code{bad_control_identification_strategy = "did"} (see below).}
+
+\item{bad_control_identification_strategy}{Which assumption identifies the
+bad control's untreated potential evolution: \code{"unconfoundedness"}
+(default), i.e. Covariate Unconfoundedness for the bad control given
+\code{(bc_pre, W, Z)}, or \code{"did"}, i.e. parallel trends for the bad
+control itself given \code{(W, Z)}
+(\code{app:bad-control-parallel-trends} in the supplementary appendix).
+\code{"did"} requires \code{bad_control_formula} to be non-\code{NULL}
+and does not distinguish a binary bad control.}
 
 \item{...}{unused}
 }
 \description{
 Imputation ATT(g,t) estimator for bad controls
+}
+\details{
+This function only handles the shared leadin (pivoting \code{gt_data} to
+one row per unit, and constructing the covariate columns/names), then
+dispatches to \code{\link{imputation_unconfoundedness}} or
+\code{\link{imputation_did}} depending on
+\code{bad_control_identification_strategy}.
 }
 \keyword{internal}

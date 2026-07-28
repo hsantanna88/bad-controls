@@ -16,6 +16,7 @@ didbc(
   bad_control_cov_formula = NULL,
   bad_control_d_cov_formula = NULL,
   est_method = c("imputation", "dr_ml"),
+  bad_control_identification_strategy = c("unconfoundedness", "did"),
   nuisance_method = c("ml", "parametric"),
   control_group = "notyettreated",
   anticipation = 0,
@@ -74,6 +75,16 @@ entered as a change (post minus pre) rather than a level. Default
 \item{est_method}{Estimation method: \code{"imputation"} (default) for
 the two-step imputation approach, or \code{"dr_ml"} for the doubly
 robust estimator.}
+
+\item{bad_control_identification_strategy}{Which assumption identifies
+the bad control's untreated potential evolution: \code{"unconfoundedness"}
+(default), i.e. Covariate Unconfoundedness for the bad control given
+its own pre-period level and \code{(W, Z)}, or \code{"did"}, i.e.
+parallel trends for the bad control itself given \code{(W, Z)}
+(\code{app:bad-control-parallel-trends} in the supplementary appendix).
+\code{"did"} is only supported for \code{est_method = "imputation"},
+requires \code{bad_control_formula} to be non-\code{NULL}, and does not
+distinguish a binary bad control.}
 
 \item{nuisance_method}{For \code{est_method = "dr_ml"} only: \code{"ml"}
 (default) estimates the doubly robust estimator's nuisance functions

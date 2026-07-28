@@ -24,7 +24,9 @@
 #' @param dgp Which counterfactual evolution equation for X_t(0) to use:
 #'   \code{"dgp1"} (linear W), \code{"dgp2"} (nonlinear W), \code{"dgp3"}
 #'   (nonlinear in (X(t-1), Z), no W -- Simple Covariate Unconfoundedness
-#'   holds), or \code{"stress"} (severe nonlinearity in W)
+#'   holds), \code{"dgp4"} (linear W, coefficient 1 on the lag -- parallel
+#'   trends for the bad control given (W,Z) holds exactly, see Details), or
+#'   \code{"stress"} (severe nonlinearity in W)
 #' @param lambda How much treatment shifts X at event time 0 (default 0.5)
 #' @param delta Direct effect of treatment on Y at event time 0, net of the
 #'   effect transmitted through X (default 0.5)
@@ -70,9 +72,22 @@
 #' \code{dgp}-specific equation (redrawing fresh noise every period):
 #' \itemize{
 #'   \item dgp1: \eqn{0.7 X_{i,t-1}(0) + 0.3Z_i + 0.2W_i + 0.15}
-#'   \item dgp2: dgp1's equation plus \eqn{0.15 W_i^2}
+#'   \item dgp2: \eqn{0.7 X_{i,t-1}(0) + 0.3Z_i + 0.2W_i + 0.15 W_i^2 + 0.15}
 #'   \item dgp3: \eqn{0.7 X_{i,t-1}(0) + 0.3Z_i + 0.4 X_{i,t-1}(0) Z_i +
 #'     0.2 X_{i,t-1}(0)^2 + 0.15} (no W)
+#'   \item dgp4: \eqn{X_{i,t-1}(0) + 0.3Z_i + 0.2W_i + 0.15}. The coefficient
+#'     of 1 on the lag (a random walk with drift in \eqn{(Z,W)}), unlike
+#'     dgp1's 0.7, is deliberate: it makes \eqn{\Delta X_{it}(0) = X_{it}(0)
+#'     - X_{i,t-1}(0)} itself a function of \eqn{(Z,W)} alone (plus
+#'     independent noise), so parallel trends for the bad control given
+#'     \eqn{(W,Z)} (`app:bad-control-parallel-trends` in the supplementary
+#'     appendix) holds exactly under dgp4, alongside Covariate
+#'     Unconfoundedness given \eqn{(X_{t-1},W,Z)}. dgp1/2/3/stress instead
+#'     match the paper's actual Monte Carlo designs (including, for dgp1,
+#'     the "Exclude BC" finding that dropping the bad control entirely
+#'     stays nearly unbiased there specifically); dgp4 does not attempt to
+#'     match any Monte Carlo design in the paper, and exists only to test
+#'     the parallel-trends identification strategy.
 #'   \item stress: dgp2's equation plus \eqn{0.25 X_{i,t-1}(0) W_i}
 #' }
 #' each plus \eqn{0.3\varepsilon^{X_t}_i}.
@@ -125,7 +140,7 @@
 #'
 #' @export
 simulate_bad_controls <- function(n = 2000, T_max = 4, groups = 2:T_max,
-                                  dgp = c("dgp1", "dgp2", "dgp3", "stress"),
+                                  dgp = c("dgp1", "dgp2", "dgp3", "dgp4", "stress"),
                                   lambda = 0.5, delta = 0.5, kappa = 0.5,
                                   beta_drift = 0.2,
                                   binary_bad_control = FALSE) {
@@ -167,6 +182,7 @@ simulate_bad_controls <- function(n = 2000, T_max = 4, groups = 2:T_max,
     dgp1   = function(x_lag) 0.7 * x_lag + 0.3 * Z + 0.2 * W + 0.15,
     dgp2   = function(x_lag) 0.7 * x_lag + 0.3 * Z + 0.2 * W + 0.15 * W^2 + 0.15,
     dgp3   = function(x_lag) 0.7 * x_lag + 0.3 * Z + 0.4 * x_lag * Z + 0.2 * x_lag^2 + 0.15,
+    dgp4   = function(x_lag) x_lag + 0.3 * Z + 0.2 * W + 0.15,
     stress = function(x_lag) 0.7 * x_lag + 0.3 * Z + 0.2 * W + 0.3 * W^2 + 0.25 * x_lag * W + 0.15
   )
   for (t in 2:T_max) {
