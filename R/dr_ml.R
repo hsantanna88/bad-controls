@@ -9,14 +9,14 @@
 #' @details Implements Algorithm 1 from the paper: four nuisance functions,
 #'  with K-fold cross-fitting:
 #'  \itemize{
-#'    \item m_0(X_t*, X_t*-1, Z): outcome regression E[DeltaY | X_t*, X_t*-1,
-#'      Z, D=0]
-#'    \item nu_0(X_t*-1, W, Z): E[m_0(X_t*, X_t*-1, Z) | X_t*-1, W, Z, D=0], a
-#'      second-stage regression of m_0's fitted values on (X_t*-1, W, Z)
+#'    \item m_0(X_t*, X_t*-1, Z): outcome regression
+#'      `E[DeltaY | X_t*, X_t*-1, Z, D=0]`
+#'    \item nu_0(X_t*-1, W, Z): `E[m_0(X_t*, X_t*-1, Z) | X_t*-1, W, Z, D=0]`,
+#'      a second-stage regression of m_0's fitted values on (X_t*-1, W, Z)
 #'      among untreated units
 #'    \item p_2(X_t*-1, W, Z): the propensity score P(D=1 | X_t*-1, W, Z)
-#'    \item omega_0(X_t*, X_t*-1, Z): E[p_2/(1-p_2) | X_t*, X_t*-1, Z, D=0], a
-#'      regression of the fitted propensity odds ratio on (X_t*, X_t*-1, Z)
+#'    \item omega_0(X_t*, X_t*-1, Z): `E[p_2/(1-p_2) | X_t*, X_t*-1, Z, D=0]`,
+#'      a regression of the fitted propensity odds ratio on (X_t*, X_t*-1, Z)
 #'      among untreated units
 #'  }
 #'

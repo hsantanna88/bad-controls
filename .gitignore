@@ -7,3 +7,8 @@ src/*.so
 src/*.dll
 *.Rproj
 dev/
+.revdeplite/results
+.revdeplite/github
+.revdeplite/*.rds
+.revdeplite/*.tar.gz
+.revdeplite/*.md
