@@ -1,10 +1,14 @@
 # =============================================================================
 # Title: Simulate panel data with bad controls
-# Description: Generates staggered DiD panel data matching the Monte Carlo
-#   designs (DGP 1/2/3 and the stress test) in Caetano, Callaway, Payne, and
-#   Sant'Anna (2024), with known group-time, event-study, and overall ATT.
+# Description: Generates staggered DiD panel data with known group-time,
+#   event-study, and overall ATT, for testing bad-control estimators. dgp1
+#   and dgp3 match the Monte Carlo designs in Caetano, Callaway, Payne, and
+#   Sant'Anna (2024); dgp2/dgp4/dgp5 are this package's own designs (dgp2 was
+#   originally a literal replica of the paper's "Nonlinear W" design, but was
+#   redesigned here after finding it pathological -- see Details -- pending
+#   the paper itself being updated to match).
 # Author: Brant Callaway
-# Last update: 2026-07-27
+# Last update: 2026-07-28
 # Date created: 2026-07-25
 # =============================================================================
 
@@ -26,7 +30,9 @@
 #'   (nonlinear in (X(t-1), Z), no W -- Simple Covariate Unconfoundedness
 #'   holds), \code{"dgp4"} (linear W, coefficient 1 on the lag -- parallel
 #'   trends for the bad control given (W,Z) holds exactly, see Details), or
-#'   \code{"stress"} (severe nonlinearity in W)
+#'   \code{"dgp5"} (nonlinear W plus an \eqn{X_{t-1} \times W} interaction --
+#'   something a linear model cannot represent at all, unlike a curved but
+#'   additive term; see Details)
 #' @param lambda How much treatment shifts X at event time 0 (default 0.5)
 #' @param delta Direct effect of treatment on Y at event time 0, net of the
 #'   effect transmitted through X (default 0.5)
@@ -71,10 +77,30 @@
 #' \eqn{t \ge 2}, \eqn{X_{it}(0)} evolves according to the
 #' \code{dgp}-specific equation (redrawing fresh noise every period):
 #' \itemize{
-#'   \item dgp1: \eqn{0.7 X_{i,t-1}(0) + 0.3Z_i + 0.2W_i + 0.15}
-#'   \item dgp2: \eqn{0.7 X_{i,t-1}(0) + 0.3Z_i + 0.2W_i + 0.15 W_i^2 + 0.15}
+#'   \item dgp1: \eqn{0.7 X_{i,t-1}(0) + 0.3Z_i + 0.2W_i + 0.15}. Matches the
+#'     paper's actual Monte Carlo design, including the "Exclude BC" finding
+#'     that dropping the bad control entirely stays nearly unbiased there
+#'     specifically.
+#'   \item dgp2: \eqn{0.7 X_{i,t-1}(0) + 0.3Z_i + 0.2W_i + 0.03 W_i^2 + 0.15}.
+#'     This package's own "nonlinear W" design -- not (yet) a literal replica
+#'     of the paper's own DGP2. The paper's original coefficients
+#'     (\eqn{0.15W_i^2} added to dgp1's equation) put the quadratic term's
+#'     vertex at \eqn{W = -0.667}, well inside \eqn{W}'s support
+#'     (\eqn{SD(W) \approx 0.88}), making the map from \eqn{W} to
+#'     \eqn{X_{it}(0)} two-to-one for nearly the whole population -- a
+#'     pathological non-monotonicity, not just "nonlinearity," that
+#'     specifically breaks \code{dr_ml_attgt()}'s \eqn{\omega_0} (which
+#'     conditions on \eqn{(X_{it}, X_{i,t-1}, Z)}, not \eqn{W}, and so must
+#'     implicitly marginalize over a non-invertible \eqn{W}). This dgp2 keeps
+#'     the same linear coefficient on \eqn{W} as dgp1 (0.2, so it still reads
+#'     as "dgp1 plus one added wrinkle"), but with a small enough quadratic
+#'     coefficient (0.03) that the vertex sits at \eqn{W = -3.33} (about 3.8
+#'     SDs out) -- safely beyond what any realistic sample reaches, while
+#'     still contributing a real, detectable nonlinearity (about 13\% of the
+#'     linear term's own size at 1 SD of \eqn{W}, versus the paper's 66\%).
 #'   \item dgp3: \eqn{0.7 X_{i,t-1}(0) + 0.3Z_i + 0.4 X_{i,t-1}(0) Z_i +
-#'     0.2 X_{i,t-1}(0)^2 + 0.15} (no W)
+#'     0.2 X_{i,t-1}(0)^2 + 0.15} (no W). Matches the paper's actual Monte
+#'     Carlo design.
 #'   \item dgp4: \eqn{X_{i,t-1}(0) + 0.3Z_i + 0.2W_i + 0.15}. The coefficient
 #'     of 1 on the lag (a random walk with drift in \eqn{(Z,W)}), unlike
 #'     dgp1's 0.7, is deliberate: it makes \eqn{\Delta X_{it}(0) = X_{it}(0)
@@ -82,13 +108,27 @@
 #'     independent noise), so parallel trends for the bad control given
 #'     \eqn{(W,Z)} (`app:bad-control-parallel-trends` in the supplementary
 #'     appendix) holds exactly under dgp4, alongside Covariate
-#'     Unconfoundedness given \eqn{(X_{t-1},W,Z)}. dgp1/2/3/stress instead
-#'     match the paper's actual Monte Carlo designs (including, for dgp1,
-#'     the "Exclude BC" finding that dropping the bad control entirely
-#'     stays nearly unbiased there specifically); dgp4 does not attempt to
-#'     match any Monte Carlo design in the paper, and exists only to test
-#'     the parallel-trends identification strategy.
-#'   \item stress: dgp2's equation plus \eqn{0.25 X_{i,t-1}(0) W_i}
+#'     Unconfoundedness given \eqn{(X_{t-1},W,Z)}. Does not attempt to match
+#'     any Monte Carlo design in the paper, and exists only to test the
+#'     parallel-trends identification strategy.
+#'   \item dgp5: \eqn{0.7 X_{i,t-1}(0) + 0.3Z_i + 0.2W_i + 0.03 W_i^2 +
+#'     0.05 X_{i,t-1}(0) W_i + 0.15}. dgp2's equation plus an
+#'     \eqn{X_{t-1} \times W} interaction. Unlike a curved-but-additive term,
+#'     an interaction is something a linear model (as in
+#'     \code{imputation_attgt()}'s Step 1) cannot represent at all, no
+#'     matter how strong -- a categorical, not just approximate,
+#'     misspecification. Meant to show a bigger separation between
+#'     Imputation and \code{dr_ml_attgt()} than dgp2 does, since forests
+#'     capture interactions natively without needing to be told where to
+#'     look. The interaction coefficient (0.05) was chosen empirically: it's
+#'     the smallest of several tried that still gives Imputation clearly
+#'     larger (roughly double or more) bias than dgp2 does, while keeping
+#'     \code{dr_ml_attgt()}'s own analytical-SE calibration reasonable
+#'     (larger coefficients tried, e.g. 0.10, gave a starker bias gap but
+#'     degraded \code{nuisance_method = "ml"}'s SE calibration, apparently
+#'     worsening rather than improving with \code{n} -- a real, persistent
+#'     problem rather than finite-sample noise, unlike dgp5's own milder
+#'     behavior, which does improve with \code{n}).
 #' }
 #' each plus \eqn{0.3\varepsilon^{X_t}_i}.
 #'
@@ -140,7 +180,7 @@
 #'
 #' @export
 simulate_bad_controls <- function(n = 2000, T_max = 4, groups = 2:T_max,
-                                  dgp = c("dgp1", "dgp2", "dgp3", "dgp4", "stress"),
+                                  dgp = c("dgp1", "dgp2", "dgp3", "dgp4", "dgp5"),
                                   lambda = 0.5, delta = 0.5, kappa = 0.5,
                                   beta_drift = 0.2,
                                   binary_bad_control = FALSE) {
@@ -179,11 +219,11 @@ simulate_bad_controls <- function(n = 2000, T_max = 4, groups = 2:T_max,
   }
 
   evolve_x <- switch(dgp,
-    dgp1   = function(x_lag) 0.7 * x_lag + 0.3 * Z + 0.2 * W + 0.15,
-    dgp2   = function(x_lag) 0.7 * x_lag + 0.3 * Z + 0.2 * W + 0.15 * W^2 + 0.15,
-    dgp3   = function(x_lag) 0.7 * x_lag + 0.3 * Z + 0.4 * x_lag * Z + 0.2 * x_lag^2 + 0.15,
-    dgp4   = function(x_lag) x_lag + 0.3 * Z + 0.2 * W + 0.15,
-    stress = function(x_lag) 0.7 * x_lag + 0.3 * Z + 0.2 * W + 0.3 * W^2 + 0.25 * x_lag * W + 0.15
+    dgp1 = function(x_lag) 0.7 * x_lag + 0.3 * Z + 0.2 * W + 0.15,
+    dgp2 = function(x_lag) 0.7 * x_lag + 0.3 * Z + 0.2 * W + 0.03 * W^2 + 0.15,
+    dgp3 = function(x_lag) 0.7 * x_lag + 0.3 * Z + 0.4 * x_lag * Z + 0.2 * x_lag^2 + 0.15,
+    dgp4 = function(x_lag) x_lag + 0.3 * Z + 0.2 * W + 0.15,
+    dgp5 = function(x_lag) 0.7 * x_lag + 0.3 * Z + 0.2 * W + 0.03 * W^2 + 0.05 * x_lag * W + 0.15
   )
   for (t in 2:T_max) {
     idx_mat[, t] <- evolve_x(X0[, t - 1])
