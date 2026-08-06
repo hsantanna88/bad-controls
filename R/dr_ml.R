@@ -37,6 +37,27 @@
 #'  X_t*(0)), and nu_0/omega_0 target m_0's/p_2's fitted values through a
 #'  second regression rather than plugging in a predicted X_t*(0).
 #'
+#'  nu_0 and omega_0 are themselves nested conditional expectations of
+#'  m_0/p_2 (e.g. nu_0 = E\[m_0 | X_t*-1, W, Z, D=0\]), so regressing m_0's/
+#'  p_2's fitted values on the coarser feature set using the same
+#'  training-fold observations that fit m_0/p_2 would be a generated-
+#'  regressor problem: the pseudo-outcome's estimation error is correlated
+#'  with the very sample the nested regression is fit on, not just small in
+#'  L^2. Under \code{nuisance_method = "ml"}, this is avoided using each
+#'  forest's out-of-bag (OOB) predictions -- \code{grf}'s \code{predict(fit)}
+#'  with no \code{newdata}, which averages only over trees that did not
+#'  include a given row in their subsample -- as the pseudo-outcome for
+#'  nu_0/omega_0's training data, instead of the in-sample
+#'  \code{predict(fit, newdata = <training data>)}. This costs nothing extra
+#'  to fit (no additional forests, unlike an explicit training-fold split)
+#'  and keeps the full training fold available to nu_0/omega_0, at the cost
+#'  of a less clean-cut independence argument than literal disjoint
+#'  subsamples would give. The main m_0/p_2 fits used directly in the doubly
+#'  robust score are unaffected -- they are already evaluated out-of-sample
+#'  via the outer K-fold. Under \code{nuisance_method = "parametric"}, no
+#'  OOB equivalent applies (\code{lm}/\code{glm} have no such notion); that
+#'  path is unchanged, per the paragraph above.
+#'
 #'  The doubly robust score is consistent if either (m_0, nu_0) or (p_2,
 #'  omega_0) are correctly specified.
 #'
@@ -119,6 +140,10 @@
 #'
 #' Sant'Anna, P.H.C. and Zhao, J. (2020). "Doubly Robust
 #'   Difference-in-Differences Estimators." \emph{Journal of Econometrics}.
+#'
+#' Wager, S. and Athey, S. (2018). "Estimation and Inference of
+#'   Heterogeneous Treatment Effects using Random Forests." \emph{Journal
+#'   of the American Statistical Association}.
 #'
 #' @export
 dr_ml_attgt <- function(gt_data,
@@ -304,15 +329,36 @@ dr_ml_attgt <- function(gt_data,
       p_features[train_idx, , drop = FALSE], D[train_idx], nuisance_method
     )
 
-    # Second stage (Algorithm 1, step 2b): nu_0 regresses m_0's in-sample
-    # fitted values on (X_t*-1, W, Z); omega_0 regresses p_2's in-sample
-    # fitted odds ratio on (X_t*, X_t*-1, Z) -- both among untreated units
-    # in the training fold. With no bad control, nu_0 = m_0 and
-    # omega_0 = p_2/(1-p_2) exactly (m_0 no longer depends on X_t*, so
-    # there is nothing left for nu_0 to marginalize over; p_2 is already a
-    # function of Z alone, so omega_0's further conditioning on Z is a
-    # no-op), so there is nothing to fit here.
-    if (has_bc) {
+    # Second stage (Algorithm 1, step 2b): nu_0 regresses m_0's fitted
+    # values on (X_t*-1, W, Z); omega_0 regresses p_2's fitted odds ratio on
+    # (X_t*, X_t*-1, Z) -- both among untreated units in the training fold.
+    # With no bad control, nu_0 = m_0 and omega_0 = p_2/(1-p_2) exactly
+    # (m_0 no longer depends on X_t*, so there is nothing left for nu_0 to
+    # marginalize over; p_2 is already a function of Z alone, so omega_0's
+    # further conditioning on Z is a no-op), so there is nothing to fit
+    # here.
+    if (has_bc && nuisance_method == "ml") {
+      # nu_0/omega_0 are nested conditional expectations of m_0/p_2:
+      # regressing m_fit's/p_fit's fitted values on the coarser feature set
+      # using the SAME sample that fit m_fit/p_fit is a generated-regressor
+      # problem. Use grf's out-of-bag predictions (predict(fit), no
+      # newdata) instead of predict(fit, newdata = <training data>) as the
+      # pseudo-outcome -- OOB predictions for a row only average over
+      # trees that didn't include that row in their subsample, so they're
+      # not self-referential the way an in-sample newdata prediction is.
+      m_fitted_train <- predict_reg_nuisance_oob(m_fit)
+      nu_fit <- fit_reg_nuisance(p_features_train_comp, m_fitted_train, nuisance_method)
+
+      # p_fit's OOB predictions come back for all of train_idx (treated +
+      # control, in train_idx's order); subset down to the untreated units
+      # (train_comp_idx) that omega_fit is trained on.
+      p_fitted_all_oob <- predict_prop_nuisance_oob(p_fit)
+      p_fitted_train <- p_fitted_all_oob[match(train_comp_idx, train_idx)]
+      odds_fitted_train <- p_fitted_train / (1 - p_fitted_train)
+      omega_fit <- fit_reg_nuisance(m_features_train_comp, odds_fitted_train, nuisance_method)
+    } else if (has_bc) {
+      # nuisance_method == "parametric": no OOB equivalent for lm/glm, per
+      # the Details section -- root-n first stages don't need it anyway.
       m_fitted_train <- predict_reg_nuisance(m_fit, m_features_train_comp, nuisance_method)
       nu_fit <- fit_reg_nuisance(p_features_train_comp, m_fitted_train, nuisance_method)
 
@@ -394,4 +440,20 @@ predict_prop_nuisance <- function(fit, newdata_mat, nuisance_method) {
     return(predict(fit, newdata = newdata_mat)$predictions[, 2])
   }
   stats::predict(fit, newdata = data.frame(newdata_mat), type = "response")
+}
+
+# Out-of-bag predictions for a grf forest's own training data: calling
+# predict() with no `newdata` returns, for each training row, an average
+# over only the trees that did not include that row in their subsample --
+# an out-of-sample-like prediction obtained for free from the already-fit
+# forest. Used as the pseudo-outcome for nu_0/omega_0 (see the "ml" branch
+# of dr_ml_attgt()'s main loop) instead of predict(fit, newdata =
+# <training data>), which would be self-referential. ml-only: lm/glm (the
+# "parametric" nuisance_method) have no OOB equivalent.
+predict_reg_nuisance_oob <- function(fit) {
+  predict(fit)$predictions
+}
+
+predict_prop_nuisance_oob <- function(fit) {
+  predict(fit)$predictions[, 2]
 }
