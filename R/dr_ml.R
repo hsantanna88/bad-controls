@@ -130,6 +130,14 @@
 #'   from \code{overlap_threshold}; see Details). Default 5, matching
 #'   \code{did}'s own convention for an analogous check.
 #' @param n_folds number of cross-fitting folds (default 5)
+#' @param num_threads Number of threads for \code{grf}'s forests under
+#'   \code{nuisance_method = "ml"}. Default \code{NULL} uses \code{grf}'s own
+#'   auto-detection (all available cores). Set to \code{1} to pin a single
+#'   thread per forest -- e.g. for Monte Carlo work, where many reps are run
+#'   in outer parallelism (one core each) rather than letting each individual
+#'   forest fit claim every core on the machine. Unused under
+#'   \code{nuisance_method = "parametric"} (\code{lm}/\code{glm} have no
+#'   thread concept).
 #' @param ... additional arguments (unused)
 #'
 #' @return \code{attgt_if} object with ATT estimate and influence function
@@ -157,6 +165,7 @@ dr_ml_attgt <- function(gt_data,
                         overlap_threshold = 0.99,
                         min_group_size = 5,
                         n_folds = 5,
+                        num_threads = NULL,
                         ...) {
 
   nuisance_method <- match.arg(nuisance_method)
@@ -281,7 +290,7 @@ dr_ml_attgt <- function(gt_data,
   # estimation is going to run into an overlap problem, not a generic proxy.
   # If violated, fall back to imputation_attgt() for the whole cell rather
   # than dropping p_2/omega_0 alone -- see Details for why.
-  overlap_fit <- fit_prop_nuisance(p_features, D, nuisance_method)
+  overlap_fit <- fit_prop_nuisance(p_features, D, nuisance_method, num_threads)
   overlap_p <- predict_prop_nuisance(overlap_fit, p_features, nuisance_method)
   overlap_violation <- overlap_p > overlap_threshold
   if (any(overlap_violation)) {
@@ -324,9 +333,9 @@ dr_ml_attgt <- function(gt_data,
 
     # First stage (Algorithm 1, step 2a): m_0 on untreated units, p_2 on all
     # units.
-    m_fit <- fit_reg_nuisance(m_features_train_comp, DeltaY[train_comp_idx], nuisance_method)
+    m_fit <- fit_reg_nuisance(m_features_train_comp, DeltaY[train_comp_idx], nuisance_method, num_threads)
     p_fit <- fit_prop_nuisance(
-      p_features[train_idx, , drop = FALSE], D[train_idx], nuisance_method
+      p_features[train_idx, , drop = FALSE], D[train_idx], nuisance_method, num_threads
     )
 
     # Second stage (Algorithm 1, step 2b): nu_0 regresses m_0's fitted
@@ -347,7 +356,7 @@ dr_ml_attgt <- function(gt_data,
       # trees that didn't include that row in their subsample, so they're
       # not self-referential the way an in-sample newdata prediction is.
       m_fitted_train <- predict_reg_nuisance_oob(m_fit)
-      nu_fit <- fit_reg_nuisance(p_features_train_comp, m_fitted_train, nuisance_method)
+      nu_fit <- fit_reg_nuisance(p_features_train_comp, m_fitted_train, nuisance_method, num_threads)
 
       # p_fit's OOB predictions come back for all of train_idx (treated +
       # control, in train_idx's order); subset down to the untreated units
@@ -355,16 +364,16 @@ dr_ml_attgt <- function(gt_data,
       p_fitted_all_oob <- predict_prop_nuisance_oob(p_fit)
       p_fitted_train <- p_fitted_all_oob[match(train_comp_idx, train_idx)]
       odds_fitted_train <- p_fitted_train / (1 - p_fitted_train)
-      omega_fit <- fit_reg_nuisance(m_features_train_comp, odds_fitted_train, nuisance_method)
+      omega_fit <- fit_reg_nuisance(m_features_train_comp, odds_fitted_train, nuisance_method, num_threads)
     } else if (has_bc) {
       # nuisance_method == "parametric": no OOB equivalent for lm/glm, per
       # the Details section -- root-n first stages don't need it anyway.
       m_fitted_train <- predict_reg_nuisance(m_fit, m_features_train_comp, nuisance_method)
-      nu_fit <- fit_reg_nuisance(p_features_train_comp, m_fitted_train, nuisance_method)
+      nu_fit <- fit_reg_nuisance(p_features_train_comp, m_fitted_train, nuisance_method, num_threads)
 
       p_fitted_train <- predict_prop_nuisance(p_fit, p_features_train_comp, nuisance_method)
       odds_fitted_train <- p_fitted_train / (1 - p_fitted_train)
-      omega_fit <- fit_reg_nuisance(m_features_train_comp, odds_fitted_train, nuisance_method)
+      omega_fit <- fit_reg_nuisance(m_features_train_comp, odds_fitted_train, nuisance_method, num_threads)
     }
 
     # Evaluate all four nuisance functions on the held-out fold (step 3).
@@ -407,9 +416,9 @@ dr_ml_attgt <- function(gt_data,
 # Fit a regression nuisance function (m_0, nu_0, or omega_0): a cross-fitted
 # random forest under nuisance_method = "ml", or OLS under
 # nuisance_method = "parametric".
-fit_reg_nuisance <- function(x_mat, y, nuisance_method) {
+fit_reg_nuisance <- function(x_mat, y, nuisance_method, num_threads = NULL) {
   if (nuisance_method == "ml") {
-    return(grf::regression_forest(X = x_mat, Y = y))
+    return(grf::regression_forest(X = x_mat, Y = y, num.threads = num_threads))
   }
   df <- data.frame(x_mat)
   df$.y <- y
@@ -426,9 +435,9 @@ predict_reg_nuisance <- function(fit, newdata_mat, nuisance_method) {
 # Fit the propensity score p_2: a cross-fitted random forest under
 # nuisance_method = "ml", or logistic regression under
 # nuisance_method = "parametric".
-fit_prop_nuisance <- function(x_mat, d, nuisance_method) {
+fit_prop_nuisance <- function(x_mat, d, nuisance_method, num_threads = NULL) {
   if (nuisance_method == "ml") {
-    return(grf::probability_forest(X = x_mat, Y = as.factor(d)))
+    return(grf::probability_forest(X = x_mat, Y = as.factor(d), num.threads = num_threads))
   }
   df <- data.frame(x_mat)
   df$.d <- d

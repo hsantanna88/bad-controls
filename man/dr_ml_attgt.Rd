@@ -16,6 +16,7 @@ dr_ml_attgt(
   overlap_threshold = 0.99,
   min_group_size = 5,
   n_folds = 5,
+  num_threads = NULL,
   ...
 )
 }
@@ -70,6 +71,15 @@ from \code{overlap_threshold}; see Details). Default 5, matching
 
 \item{n_folds}{number of cross-fitting folds (default 5)}
 
+\item{num_threads}{Number of threads for \code{grf}'s forests under
+\code{nuisance_method = "ml"}. Default \code{NULL} uses \code{grf}'s own
+auto-detection (all available cores). Set to \code{1} to pin a single
+thread per forest -- e.g. for Monte Carlo work, where many reps are run
+in outer parallelism (one core each) rather than letting each individual
+forest fit claim every core on the machine. Unused under
+\code{nuisance_method = "parametric"} (\code{lm}/\code{glm} have no
+thread concept).}
+
 \item{...}{additional arguments (unused)}
 }
 \value{
@@ -114,6 +124,27 @@ control is needed: X_t* is observed directly for untreated units (X_t* =
 X_t*(0)), and nu_0/omega_0 target m_0's/p_2's fitted values through a
 second regression rather than plugging in a predicted X_t*(0).
 
+nu_0 and omega_0 are themselves nested conditional expectations of
+m_0/p_2 (e.g. nu_0 = E[m_0 | X_t*-1, W, Z, D=0]), so regressing m_0's/
+p_2's fitted values on the coarser feature set using the same
+training-fold observations that fit m_0/p_2 would be a generated-
+regressor problem: the pseudo-outcome's estimation error is correlated
+with the very sample the nested regression is fit on, not just small in
+L^2. Under \code{nuisance_method = "ml"}, this is avoided using each
+forest's out-of-bag (OOB) predictions -- \code{grf}'s \code{predict(fit)}
+with no \code{newdata}, which averages only over trees that did not
+include a given row in their subsample -- as the pseudo-outcome for
+nu_0/omega_0's training data, instead of the in-sample
+\code{predict(fit, newdata = <training data>)}. This costs nothing extra
+to fit (no additional forests, unlike an explicit training-fold split)
+and keeps the full training fold available to nu_0/omega_0, at the cost
+of a less clean-cut independence argument than literal disjoint
+subsamples would give. The main m_0/p_2 fits used directly in the doubly
+robust score are unaffected -- they are already evaluated out-of-sample
+via the outer K-fold. Under \code{nuisance_method = "parametric"}, no
+OOB equivalent applies (\code{lm}/\code{glm} have no such notion); that
+path is unchanged, per the paragraph above.
+
 The doubly robust score is consistent if either (m_0, nu_0) or (p_2,
 omega_0) are correctly specified.
 
@@ -153,4 +184,8 @@ Caetano, C., Callaway, B., Payne, S., and Sant'Anna, H. (2024).
 
 Sant'Anna, P.H.C. and Zhao, J. (2020). "Doubly Robust
 Difference-in-Differences Estimators." \emph{Journal of Econometrics}.
+
+Wager, S. and Athey, S. (2018). "Estimation and Inference of
+Heterogeneous Treatment Effects using Random Forests." \emph{Journal
+of the American Statistical Association}.
 }

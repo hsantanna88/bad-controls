@@ -87,6 +87,13 @@
 #'   covariates it has to fit, which can fail even under good covariate
 #'   overlap. Default 5, matching \code{did}'s own convention for an
 #'   analogous check.
+#' @param num_threads For \code{est_method = "dr_ml"}, \code{nuisance_method
+#'   = "ml"} only: number of threads for \code{grf}'s forests. Default
+#'   \code{NULL} uses \code{grf}'s own auto-detection (all available cores).
+#'   Set to \code{1} to pin a single thread per forest -- e.g. for Monte
+#'   Carlo work, where many reps are run in outer parallelism (one core
+#'   each) rather than letting each individual forest fit claim every core
+#'   on the machine.
 #' @param ... Additional arguments passed to \code{ptetools::pte}
 #'
 #' @return A \code{pte_results} object containing:
@@ -162,6 +169,7 @@ didbc <- function(yname,
                   nfolds = 5,
                   overlap_threshold = 0.99,
                   min_group_size = 5,
+                  num_threads = NULL,
                   ...) {
 
   est_method <- match.arg(est_method)
@@ -219,7 +227,8 @@ didbc <- function(yname,
         bad_control_binary = bad_control_binary,
         overlap_threshold = overlap_threshold,
         min_group_size = min_group_size,
-        n_folds = nfolds
+        n_folds = nfolds,
+        num_threads = num_threads
       )
     }
   } else {

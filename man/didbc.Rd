@@ -31,6 +31,7 @@ didbc(
   nfolds = 5,
   overlap_threshold = 0.99,
   min_group_size = 5,
+  num_threads = NULL,
   ...
 )
 }
@@ -142,6 +143,14 @@ nontrivial treated sample to identify at all, relative to how many
 covariates it has to fit, which can fail even under good covariate
 overlap. Default 5, matching \code{did}'s own convention for an
 analogous check.}
+
+\item{num_threads}{For \code{est_method = "dr_ml"}, \code{nuisance_method
+= "ml"} only: number of threads for \code{grf}'s forests. Default
+\code{NULL} uses \code{grf}'s own auto-detection (all available cores).
+Set to \code{1} to pin a single thread per forest -- e.g. for Monte
+Carlo work, where many reps are run in outer parallelism (one core
+each) rather than letting each individual forest fit claim every core
+on the machine.}
 
 \item{...}{Additional arguments passed to \code{ptetools::pte}}
 }
