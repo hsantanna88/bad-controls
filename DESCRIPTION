@@ -17,15 +17,15 @@ Description: Implements methods for difference-in-differences when
     that correctly handle post-treatment covariates. Builds on the panel
     treatment effects infrastructure in 'ptetools'. Based on Caetano, Callaway,
     Payne, and Sant'Anna (2024) "Difference-in-Differences with Bad Controls".
-URL: https://github.com/hsantanna88/bad-controls
-BugReports: https://github.com/hsantanna88/bad-controls/issues
+URL: https://github.com/hugosantanna/badcontrols
+BugReports: https://github.com/hugosantanna/badcontrols/issues
 License: GPL (>= 3)
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 Depends:
     R (>= 4.1.0)
 Imports:
-    ptetools,
+    ptetools (>= 1.0.1),
     dplyr,
     tidyr,
     stats
@@ -38,8 +38,6 @@ Suggests:
     testthat (>= 3.0.0),
     knitr,
     rmarkdown
-Remotes:
-    bcallaway11/ptetools
 VignetteBuilder: knitr
 Config/testthat/edition: 3
 Config/roxygen2/version: 8.0.0

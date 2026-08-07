@@ -11,8 +11,8 @@ Implements methods for difference-in-differences when time-varying covariates ar
 \seealso{
 Useful links:
 \itemize{
-  \item \url{https://github.com/hsantanna88/bad-controls}
-  \item Report bugs at \url{https://github.com/hsantanna88/bad-controls/issues}
+  \item \url{https://github.com/hugosantanna/badcontrols}
+  \item Report bugs at \url{https://github.com/hugosantanna/badcontrols/issues}
 }
 
 }

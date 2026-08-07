@@ -1,42 +1,45 @@
-#' @title NLSY79 Wage Scars Panel Data
+#' NLSY79 Job Displacement Application Data
 #'
-#' @description A balanced panel of 3,776 individuals from the NLSY79 over
-#'   9 periods (1984--1993, excluding 1989). Treatment is involuntary job
-#'   separation; the outcome is log hourly wage; and occupation group is
-#'   a time-varying covariate affected by job loss (a bad control).
+#' A balanced panel of 3,231 NLSY79 respondents observed biennially from 1992
+#' through 2002. The sample applies the paper's positive-earnings restriction
+#' and excludes respondents first treated in 1992, who have no pre-treatment
+#' period within the application window. The outcome is log earnings, the
+#' bad control is an occupation-based wage score, and treatment is job
+#' displacement.
 #'
-#' @format A data.frame with 33,984 rows and 11 columns:
+#' @format A data.frame with 19,386 rows and 8 columns:
 #' \describe{
-#'   \item{id}{Individual identifier}
-#'   \item{period}{Time period (1--9, mapping to years 1984--1988, 1990--1993)}
-#'   \item{G}{Treatment group: period of first job separation (0 = never separated)}
-#'   \item{lwage}{Log hourly wage}
-#'   \item{occ_group}{Occupation group (1--7, based on Census 1990 codes)}
-#'   \item{afqtscore}{AFQT score (baseline, time-invariant)}
-#'   \item{female}{Female indicator (baseline)}
-#'   \item{black}{Black indicator (baseline)}
-#'   \item{hgc}{Highest grade completed}
-#'   \item{age}{Age}
-#'   \item{exper}{Total hours of work experience}
+#'   \item{id}{Individual identifier.}
+#'   \item{year}{Survey year: 1992, 1994, 1996, 1998, 2000, or 2002.}
+#'   \item{log_earnings}{Log earnings in the previous year.}
+#'   \item{occ_score}{Occupation score: the occupation's median log hourly
+#'     wage, constructed from the IPUMS USA 1990 5\% sample.}
+#'   \item{G_window}{First year of job displacement in the 1992--2002
+#'     window; 0 denotes respondents never displaced in the window.}
+#'   \item{race}{Race/ethnicity category.}
+#'   \item{female}{Female indicator.}
+#'   \item{educ_max_grade}{Maximum years of education.}
 #' }
 #'
 #' @details
-#' The data is constructed from the NLSY79 combined wage scars dataset.
-#' Job separation (the treatment) causally affects both wages (the outcome)
-#' and occupation (the bad control). Workers who lose jobs often move to
-#' lower-paying occupations, creating an indirect channel:
+#' Job displacement is defined as involuntarily leaving a job because of a
+#' layoff/job elimination or plant/company/workplace closure. The occupation
+#' score is time-varying at the individual level because respondents can
+#' change occupations, even though the score is fixed for a given occupation.
+#' Respondents first displaced in 1992 are excluded because the application
+#' requires a pre-treatment period within the 1992--2002 window.
 #'
-#' \code{Job loss -> Occupation downgrade -> Lower wages}
+#' This is a researcher-created subset of public-use NLSY79 data and an
+#' occupation-score merge based on the public-use IPUMS USA 1990 5\% sample.
+#' It is not an official NLSY79 data release. See the source files in
+#' `data-raw/` for the construction script and provenance.
 #'
-#' Conditioning on post-separation occupation absorbs this indirect effect,
-#' understating the total wage scar. The \code{badcontrols} estimators
-#' correctly recover the total effect by imputing counterfactual occupation.
-#'
-#' @source National Longitudinal Survey of Youth 1979 (NLSY79), Bureau of
-#'   Labor Statistics. Prepared for wage scar analysis.
+#' @source National Longitudinal Survey of Youth 1979 (NLSY79), U.S. Bureau
+#'   of Labor Statistics, https://www.nlsinfo.org/investigator/; IPUMS USA,
+#'   https://usa.ipums.org/usa/.
 #'
 #' @examples
-#' data(nlsy_wagescars)
-#' head(nlsy_wagescars)
-#' table(nlsy_wagescars$G[!duplicated(nlsy_wagescars$id)])
-"nlsy_wagescars"
+#' data(nlsy_application)
+#' head(nlsy_application)
+#' table(nlsy_application$G_window[!duplicated(nlsy_application$id)])
+"nlsy_application"
