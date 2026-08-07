@@ -12,3 +12,5 @@ dev/
 .revdeplite/*.rds
 .revdeplite/*.tar.gz
 .revdeplite/*.md
+.quarto/
+vignettes/**/*.quarto_ipynb

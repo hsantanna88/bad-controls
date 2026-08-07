@@ -63,7 +63,7 @@ remotes::install_github("hugosantanna/badcontrols")
 The package includes a simulation with a treatment-affected covariate `X` and exogenous covariate `Z`.  The demo here is based on the covariate unconfoundedness assumption (approach 2 above), where we assume that unconfoundedness holds for the bad control after conditioning on the exogenous covariate `Z`, the pre-treatment value of the bad control, and the lagged outcome.  The data that we generate below is a panel with 2000 units and 4 periods.
 
 ```{r basic-example}
-## | warning: false
+#| warning: false
 library(badcontrols)
 
 sim <- simulate_bad_controls(n = 2000, T_max = 4)

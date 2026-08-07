@@ -1,14 +1,4 @@
-
-
 # badcontrols
-
-<!-- badges: start -->
-
-[![Version](https://img.shields.io/badge/version-0.1.2-blue.svg)](https://github.com/hugosantanna/badcontrols)
-[![R](https://img.shields.io/badge/R-%3E%3D%204.1-blue.svg)](https://cran.r-project.org/)
-[![License: GPL
-v3](https://img.shields.io/badge/License-GPL%20v3-green.svg)](https://www.gnu.org/licenses/gpl-3.0)
-<!-- badges: end -->
 
 ## Overview
 
@@ -40,8 +30,11 @@ untreated potential version of the bad control:
 
 For both approaches, `badcontrols` provides imputation, parametric
 doubly robust, and machine-learning estimators. The main function is
-`didbc()`, which follows a syntax similar to `did::att_gt()` and
-`ptetools::pte_default()`.
+[`didbc()`](https://github.com/hugosantanna/badcontrols/reference/didbc.md),
+which follows a syntax similar to
+[`did::att_gt()`](https://bcallaway11.github.io/did/reference/att_gt.html)
+and
+[`ptetools::pte_default()`](https://rdrr.io/pkg/ptetools/man/pte_default.html).
 
 ## Additional Resources
 
@@ -49,9 +42,11 @@ doubly robust, and machine-learning estimators. The main function is
   Controls”](https://arxiv.org/abs/2405.10557), by Caetano, Callaway,
   Payne, and Sant’Anna.
 
-- [Conceptual vignette](vignettes/bad-controls-conceptual.html)
+- [Conceptual
+  vignette](https://github.com/hugosantanna/badcontrols/vignettes/bad-controls-conceptual.md)
 
-- [Application/Coding vignette](vignettes/bad-controls-coding.html).
+- [Application/Coding
+  vignette](https://github.com/hugosantanna/badcontrols/vignettes/bad-controls-coding.md).
 
 ## Installation
 
@@ -80,13 +75,15 @@ sim <- simulate_bad_controls(n = 2000, T_max = 4)
 head(sim$data)
 ```
 
-      id period G D            Y           X          Z          W
-    1  1      1 0 0 -1.709723760 -1.05953298 -1.2070657 -1.3337493
-    2  1      2 0 0 -1.564713922 -1.76561193 -1.2070657 -1.3337493
-    3  1      3 0 0 -2.423375081 -1.63998935 -1.2070657 -1.3337493
-    4  1      4 0 0 -1.494701781 -1.16835526 -1.2070657 -1.3337493
-    5  2      1 2 0 -0.003018587 -0.04756332  0.2774292 -0.1592186
-    6  2      2 2 1  1.833864636  0.85624078  0.2774292 -0.1592186
+``` R
+  id period G D            Y           X          Z          W
+1  1      1 0 0 -1.709723760 -1.05953298 -1.2070657 -1.3337493
+2  1      2 0 0 -1.564713922 -1.76561193 -1.2070657 -1.3337493
+3  1      3 0 0 -2.423375081 -1.63998935 -1.2070657 -1.3337493
+4  1      4 0 0 -1.494701781 -1.16835526 -1.2070657 -1.3337493
+5  2      1 2 0 -0.003018587 -0.04756332  0.2774292 -0.1592186
+6  2      2 2 1  1.833864636  0.85624078  0.2774292 -0.1592186
+```
 
 ``` r
 res <- didbc(
@@ -106,11 +103,13 @@ res <- didbc(
 extract_att(res)
 ```
 
-    $att
-    [1] 1.455921
+``` R
+$att
+[1] 1.455921
 
-    $se
-    [1] 0.03035536
+$se
+[1] 0.03035536
+```
 
 The same interface can be used with `est_method = "imputation"` or with
 `nuisance_method = "ml"` for cross-fitted machine-learning nuisance
@@ -119,3 +118,27 @@ estimates.
 ## License
 
 GPL (\>= 3)
+
+# Package index
+
+## All functions
+
+- [`didbc()`](https://github.com/hugosantanna/badcontrols/reference/didbc.md)
+  : Estimate ATT(g,t) with Bad Controls
+- [`dr_ml_attgt()`](https://github.com/hugosantanna/badcontrols/reference/dr_ml_attgt.md)
+  : Doubly Robust Estimator for Bad Controls
+- [`extract_att()`](https://github.com/hugosantanna/badcontrols/reference/extract_att.md)
+  : Extract ATT and SE from ptetools results
+- [`nlsy_application`](https://github.com/hugosantanna/badcontrols/reference/nlsy_application.md)
+  : NLSY79 Job Displacement Application Data
+- [`simulate_bad_controls()`](https://github.com/hugosantanna/badcontrols/reference/simulate_bad_controls.md)
+  : Simulate Panel Data with Bad Controls
+
+# Articles
+
+### All vignettes
+
+- [Difference-in-Differences with Bad Controls: A Coding
+  Example](https://github.com/hugosantanna/badcontrols/articles/bad-controls-coding.md):
+- [Difference-in-Differences with Bad Controls: A Conceptual
+  Guide](https://github.com/hugosantanna/badcontrols/articles/bad-controls-conceptual.md):

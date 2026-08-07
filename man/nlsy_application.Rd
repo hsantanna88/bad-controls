@@ -5,19 +5,9 @@
 \alias{nlsy_application}
 \title{NLSY79 Job Displacement Application Data}
 \format{
-A data.frame with 19,386 rows and 8 columns:
-\describe{
-\item{id}{Individual identifier.}
-\item{year}{Survey year: 1992, 1994, 1996, 1998, 2000, or 2002.}
-\item{log_earnings}{Log earnings in the previous year.}
-\item{occ_score}{Occupation score: the occupation's median log hourly
-wage, constructed from the IPUMS USA 1990 5\\% sample.}
-\item{G_window}{First year of job displacement in the 1992--2002
-window; 0 denotes respondents never displaced in the window.}
-\item{race}{Race/ethnicity category.}
-\item{female}{Female indicator.}
-\item{educ_max_grade}{Maximum years of education.}
-}
+A data.frame with 19,386 rows and 8 columns: \code{id}, \code{year},
+\code{log_earnings}, \code{occ_score}, \code{G_window}, \code{race}, \code{female}, and
+\code{educ_max_grade}.
 }
 \source{
 National Longitudinal Survey of Youth 1979 (NLSY79), U.S. Bureau

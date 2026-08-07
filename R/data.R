@@ -7,19 +7,9 @@
 #' bad control is an occupation-based wage score, and treatment is job
 #' displacement.
 #'
-#' @format A data.frame with 19,386 rows and 8 columns:
-#' \describe{
-#'   \item{id}{Individual identifier.}
-#'   \item{year}{Survey year: 1992, 1994, 1996, 1998, 2000, or 2002.}
-#'   \item{log_earnings}{Log earnings in the previous year.}
-#'   \item{occ_score}{Occupation score: the occupation's median log hourly
-#'     wage, constructed from the IPUMS USA 1990 5\% sample.}
-#'   \item{G_window}{First year of job displacement in the 1992--2002
-#'     window; 0 denotes respondents never displaced in the window.}
-#'   \item{race}{Race/ethnicity category.}
-#'   \item{female}{Female indicator.}
-#'   \item{educ_max_grade}{Maximum years of education.}
-#' }
+#' @format A data.frame with 19,386 rows and 8 columns: `id`, `year`,
+#'   `log_earnings`, `occ_score`, `G_window`, `race`, `female`, and
+#'   `educ_max_grade`.
 #'
 #' @details
 #' Job displacement is defined as involuntarily leaving a job because of a
