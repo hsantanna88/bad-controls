@@ -195,3 +195,27 @@ test_that("didbc dr_ml (parametric) gives a sane estimate under DGP3 (SCU holds,
   ))
   expect_equal(res$overall_att$overall.att, sim$true_att_overall, tolerance = 0.2)
 })
+
+# Everything above calls dr_ml_attgt() only indirectly, via didbc(). This
+# calls it directly on a single (g,t) cell's gt_data, built the same way
+# didbc() builds it internally (ptetools::setup_pte() + two_by_two_subset(),
+# both part of ptetools's public API), to confirm it also works standalone.
+test_that("dr_ml_attgt() recovers the true ATT(g,t) when called directly on one cell", {
+  set.seed(44)
+  sim <- simulate_bad_controls(
+    n = 4000, T_max = 2, groups = 2, dgp = "dgp1", beta_drift = 0
+  )
+  ptep <- ptetools::setup_pte(
+    yname = "Y", gname = "G", tname = "period", idname = "id",
+    data = sim$data, bstrap = FALSE
+  )
+  gt_data <- ptetools::two_by_two_subset(
+    ptep$data, g = 2, tp = 2, control_group = "notyettreated"
+  )$gt_data
+  res <- dr_ml_attgt(
+    gt_data = gt_data, xformula = ~Z, bad_control_formula = ~X,
+    bad_control_cov_formula = ~W, nuisance_method = "parametric", n_folds = 3
+  )
+  true_att <- sim$true_att_gt$att[sim$true_att_gt$g == 2 & sim$true_att_gt$t == 2]
+  expect_equal(res$att, true_att, tolerance = 0.1)
+})
