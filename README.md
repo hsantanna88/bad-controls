@@ -47,9 +47,11 @@ doubly robust, and machine-learning estimators. The main function is
 
 - Paper: Caetano et al. (2026).
 
-- [Conceptual vignette](vignettes/bad-controls-conceptual.html)
+- [Conceptual
+  vignette](https://hsantanna.org/badcontrols/articles/bad-controls-conceptual.html)
 
-- [Application/Coding vignette](vignettes/bad-controls-coding.html)
+- [Application/Coding
+  vignette](https://hsantanna.org/badcontrols/articles/bad-controls-coding.html)
 
 ## Installation
 
