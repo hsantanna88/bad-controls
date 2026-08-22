@@ -1,5 +1,8 @@
 # badcontrols 0.1.2
 
+* Renamed the bundled application dataset `nlsy_application` to
+  `nlsy_job_displacement`, and its `G_window` column to `group` (breaking
+  change). No other columns changed.
 * Renamed the main estimating function `bc_att_gt()` to `didbc()` (breaking
   change). No arguments changed.
 * Added `num_threads` argument to `didbc()` and `dr_ml_attgt()` to control

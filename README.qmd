@@ -1,5 +1,6 @@
 ---
 format: gfm
+bibliography: vignettes/references.bib
 execute:
   collapse: true
   comment: "#>"
@@ -22,14 +23,14 @@ set.seed(1234)
 
 ## Overview
 
-A common tension in empirical work involves covariates that are affected by the treatment (aka "bad controls"), where there is an argument for (at least in some sense) trying to control for them, but also good reasons to avoid them.  In Caetano, Callaway, Payne, and Sant'Anna (2026), in the context of difference-in-differences identification strategies, we provide two approaches to dealing with bad controls that respect the bad control being affected by the treatment while playing a genuine role as a covariate too.  The `badcontrols` package implements these approaches.
+A common tension in empirical work involves covariates that are affected by the treatment (aka "bad controls"), where there is an argument for (at least in some sense) trying to control for them, but there are also issues that arise when controlling for them directly.  In @caetano-callaway-payne-santanna-2026, in the context of difference-in-differences identification strategies, we provide two approaches to dealing with bad controls that respect the bad control being affected by the treatment while playing a genuine role as a covariate too.  The `badcontrols` package implements these approaches.
 
 ## Approaches
 
 Our paper considers two alternative approaches to identifying the untreated
 potential version of the bad control:
 
-1. **Condition on the pre-treatment value of the bad control.** This approach leads to a version of Callaway and Sant'Anna (2021) that involves conditioning on the pre-treatment value of the bad control.  It is also simple and can be implemented with standard tools.
+1. **Condition on the pre-treatment value of the bad control.** This approach leads to a version of @callaway-santanna-2021 that involves conditioning on the pre-treatment value of the bad control.  It is also simple and can be implemented with standard tools.
 
 2. **Assume covariate unconfoundedness for the bad control.** This generalizes
    the first approach by modeling the bad control's untreated evolution using
@@ -40,14 +41,13 @@ robust, and machine-learning estimators. The main function is `didbc()`,
 which follows a syntax similar to `did::att_gt()` and
 `ptetools::pte_default()`.
 
-## Additional Resources
+## Additional resources
 
-* Paper: [Difference-in-Differences with "Bad
-Controls"](https://arxiv.org/abs/2405.10557), by Caetano, Callaway, Payne, and Sant'Anna.
+* Paper: @caetano-callaway-payne-santanna-2026.
 
 * [Conceptual vignette](vignettes/bad-controls-conceptual.html)
 
-* [Application/Coding vignette](vignettes/bad-controls-coding.html).
+* [Application/Coding vignette](vignettes/bad-controls-coding.html)
 
 ## Installation
 
@@ -60,7 +60,7 @@ remotes::install_github("hugosantanna/badcontrols")
 
 ## Basic example
 
-The package includes a simulation with a treatment-affected covariate `X` and exogenous covariate `Z`.  The demo here is based on the covariate unconfoundedness assumption (approach 2 above), where we assume that unconfoundedness holds for the bad control after conditioning on the exogenous covariate `Z`, the pre-treatment value of the bad control, and the lagged outcome.  The data that we generate below is a panel with 2000 units and 4 periods.
+The package includes a simulation with a treatment-affected covariate `X` and exogenous covariate `Z`.  The demo here is based on the covariate unconfoundedness assumption (New Approach 2 above), where we assume that unconfoundedness holds for the bad control after conditioning on the exogenous covariate `Z`, the pre-treatment value of the bad control, and the lagged outcome.  The data that we generate below is a panel with 2000 units and 4 periods.
 
 ```{r basic-example}
 #| warning: false
@@ -84,13 +84,33 @@ res <- didbc(
   bstrap = FALSE
 )
 
-extract_att(res)
+summary(res)
 ```
 
 The same interface can be used with `est_method = "imputation"` or with
 `nuisance_method = "ml"` for cross-fitted machine-learning nuisance
 estimates.
 
+## Citation
+
+To cite the paper underlying this package:
+
+> Caetano, C., Callaway, B., Payne, S., and Sant'Anna, H. (2026). "Difference-in-Differences with Bad Controls." arXiv preprint arXiv:2608.03881. https://arxiv.org/abs/2608.03881
+
+```
+@article{caetano2026badcontrols,
+  title   = {Difference-in-Differences with Bad Controls},
+  author  = {Caetano, Carolina and Callaway, Brantly and Payne, Stroud and Sant'Anna, Hugo},
+  journal = {arXiv preprint arXiv:2608.03881},
+  year    = {2026},
+  url     = {https://arxiv.org/abs/2608.03881}
+}
+```
+
+To cite the `badcontrols` package itself, run `citation("badcontrols")` in R.
+
 ## License
 
 GPL (>= 3)
+
+## References

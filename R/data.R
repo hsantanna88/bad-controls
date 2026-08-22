@@ -8,7 +8,7 @@
 #' displacement.
 #'
 #' @format A data.frame with 19,386 rows and 8 columns: `id`, `year`,
-#'   `log_earnings`, `occ_score`, `G_window`, `race`, `female`, and
+#'   `log_earnings`, `occ_score`, `group`, `race`, `female`, and
 #'   `educ_max_grade`.
 #'
 #' @details
@@ -29,7 +29,7 @@
 #'   https://usa.ipums.org/usa/.
 #'
 #' @examples
-#' data(nlsy_application)
-#' head(nlsy_application)
-#' table(nlsy_application$G_window[!duplicated(nlsy_application$id)])
-"nlsy_application"
+#' data(nlsy_job_displacement)
+#' head(nlsy_job_displacement)
+#' table(nlsy_job_displacement$group[!duplicated(nlsy_job_displacement$id)])
+"nlsy_job_displacement"

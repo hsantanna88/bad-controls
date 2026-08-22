@@ -2,23 +2,26 @@
 
 export(didbc)
 export(dr_ml_attgt)
-export(extract_att)
 export(simulate_bad_controls)
-importFrom(dplyr,arrange)
-importFrom(dplyr,filter)
-importFrom(dplyr,group_by)
-importFrom(dplyr,left_join)
-importFrom(dplyr,mutate)
-importFrom(dplyr,select)
-importFrom(dplyr,ungroup)
-importFrom(stats,as.formula)
-importFrom(stats,coef)
-importFrom(stats,glm)
-importFrom(stats,lm)
-importFrom(stats,model.frame)
-importFrom(stats,model.matrix)
-importFrom(stats,predict)
-importFrom(stats,quantile)
-importFrom(stats,rnorm)
-importFrom(stats,sd)
+importFrom(dplyr,
+  arrange,
+  filter,
+  group_by,
+  left_join,
+  mutate,
+  select,
+  ungroup
+)
+importFrom(stats,
+  as.formula,
+  coef,
+  glm,
+  lm,
+  model.frame,
+  model.matrix,
+  predict,
+  quantile,
+  rnorm,
+  sd
+)
 importFrom(tidyr,pivot_wider)
