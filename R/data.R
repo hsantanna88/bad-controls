@@ -28,6 +28,17 @@
 #'   of Labor Statistics, https://www.nlsinfo.org/investigator/; IPUMS USA,
 #'   https://usa.ipums.org/usa/.
 #'
+#' @references
+#' Bureau of Labor Statistics, U.S. Department of Labor. National
+#' Longitudinal Survey of Youth 1979 cohort, 1979-2022 (rounds 1-30).
+#' Produced and distributed by the Center for Human Resource Research
+#' (CHRR), The Ohio State University. Columbus, OH.
+#'
+#' Steven Ruggles, Sarah Flood, Matthew Sobek, Daniel Backman, Grace
+#' Cooper, Julia A. Rivera Drew, Stephanie Richards, Renae Rogers,
+#' Jonathan Schroeder, and Kari C.W. Williams. IPUMS USA: Version 16.0
+#' \[dataset\]. Minneapolis, MN: IPUMS, 2025. https://doi.org/10.18128/D010.V16.0
+#'
 #' @examples
 #' data(nlsy_job_displacement)
 #' head(nlsy_job_displacement)
