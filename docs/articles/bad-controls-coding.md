@@ -1,188 +1,230 @@
-# Difference-in-Differences with Bad Controls: A Coding Example
+# Mini Application on Job Displacement
 
-This vignette shows the main workflow using simulated
-staggered-treatment data. The data-generating process is the linear DGP
-1 described in the paper. `X` is the time-varying bad control, `Y` is
-the outcome, and `Z` and `W` are time-invariant covariates.
+This vignette walks through the main `badcontrols` workflow using a
+small scale version of the application in Caetano et al.
+([2026](#ref-caetano-callaway-payne-santanna-2026)) that considers the
+effect of job displacement on earnings treating a worker’s occupation
+score as the bad control.
 
-## Simulated data
+## NLSY data
+
+`nlsy_job_displacement` is a balanced panel of NLSY79 respondents
+observed biennially from 1992 to 2002. `log_earnings` is the outcome,
+`occ_score` is the bad control (it can change when a respondent changes
+occupation), and `group` gives each respondent’s displacement year (`0`
+for never displaced).
 
 ``` r
 library(badcontrols)
-library(ggplot2)
+library(ptetools)
 
-set.seed(123)
-sim <- simulate_bad_controls(
-  n = 2000,
-  T_max = 4,
-  groups = 2:4,
-  dgp = "dgp1",
-  beta_drift = 0
-)
-
-head(sim$data)
-#>   id period G D          Y          X          Z          W
-#> 1  1      1 0 0 -0.7782891 -0.3266920 -0.5604756 -0.5381157
-#> 2  1      2 0 0  0.6162895  0.3567673 -0.5604756 -0.5381157
-#> 3  1      3 0 0  0.3039487  0.0787823 -0.5604756 -0.5381157
-#> 4  1      4 0 0 -0.5515761 -0.3436366 -0.5604756 -0.5381157
-#> 5  2      1 4 0  0.5169489  0.5687958 -0.2301775  0.2505197
-#> 6  2      2 4 0  0.6478185  0.4791641 -0.2301775  0.2505197
+data(nlsy_job_displacement)
+head(nlsy_job_displacement)
+#>       id  year log_earnings occ_score group                   race female
+#>    <int> <int>        <num>     <num> <int>                 <char> <lgcl>
+#> 1:     8  1992     9.798127  2.040221     0 non_black_non_hispanic   TRUE
+#> 2:     8  1994     9.928180  2.748872     0 non_black_non_hispanic   TRUE
+#> 3:     8  1996    10.085809  2.748872     0 non_black_non_hispanic   TRUE
+#> 4:     8  1998     9.998798  2.748872     0 non_black_non_hispanic   TRUE
+#> 5:     8  2000    10.218298  2.748872     0 non_black_non_hispanic   TRUE
+#> 6:     8  2002    10.357743  2.358675     0 non_black_non_hispanic   TRUE
+#>    educ_max_grade
+#>             <int>
+#> 1:             14
+#> 2:             14
+#> 3:             14
+#> 4:             14
+#> 5:             14
+#> 6:             14
+table(nlsy_job_displacement$group[!duplicated(nlsy_job_displacement$id)])
+#> 
+#>    0 1994 1996 1998 2000 2002 
+#> 2483  209  155  113  103  168
 ```
 
-In DGP 1, the untreated evolution of the bad control depends on its lag,
-`W`, and `Z`. This determines the covariates used in the bad-control
-event study below.
+## Question 1: Is occupation score a bad control?
 
-## Event study for the bad control
-
-We first estimate an event study for `X` itself. Because `X` is the
-outcome in this exercise, we set `d_outcome = FALSE`: the estimator
-works with the level of `X` rather than a change in `X`. The
-specification includes the lagged bad control, `W`, and `Z`, matching
-the DGP 1 evolution equation.
+Before treating `occ_score` as a bad control, it’s worth checking
+directly whether displacement actually affects it. We can do this with
+the same group-time ATT machinery that
+[`didbc()`](https://github.com/hugosantanna/badcontrols/reference/didbc.md)
+builds on
+([`ptetools::pte_default()`](https://rdrr.io/pkg/ptetools/man/pte_default.html)),
+just using `occ_score` as the outcome instead of earnings.
 
 ``` r
-x_event_study <- ptetools::pte_default(
-  yname = "X",
-  gname = "G",
-  tname = "period",
+occ_score_check <- pte_default(
+  yname = "occ_score",
+  gname = "group",
+  tname = "year",
   idname = "id",
-  data = sim$data,
-  xformula = ~X + W + Z,
+  data = nlsy_job_displacement,
+  xformula = ~ race + female + educ_max_grade,
   d_outcome = FALSE,
-  d_covs_formula = ~-1,
+  lagged_outcome_cov = TRUE,
   est_method = "reg",
   control_group = "notyettreated",
   base_period = "universal",
-  bstrap = FALSE,
-  cband = FALSE
+  bstrap = FALSE
 )
 
-bad_control_event_study <- data.frame(
-  event_time = x_event_study$event_study$egt,
-  estimate = x_event_study$event_study$att.egt,
-  se = x_event_study$event_study$se.egt
-)
-
-bad_control_event_study
-#>   event_time  estimate         se
-#> 1         -3 0.1367879 0.01894161
-#> 2         -2 0.1288322 0.01179028
-#> 3         -1 0.0000000         NA
-#> 4          0 0.4937464 0.01202674
-#> 5          1 0.7399519 0.01862408
-#> 6          2 0.9833666 0.02780254
+summary(occ_score_check)
+#> 
+#> Overall ATT:  
+#>     ATT    Std. Error     [ 95%  Conf. Int.]  
+#>  -0.033        0.0113    -0.0553     -0.0108 *
+#> 
+#> 
+#> Dynamic Effects:
+#>  Event Time Estimate Std. Error [95% Simult.  Conf. Band]  
+#>         -10  -0.0210     0.0228       -0.0791      0.0371  
+#>          -8  -0.0218     0.0178       -0.0671      0.0235  
+#>          -6   0.0015     0.0143       -0.0351      0.0380  
+#>          -4  -0.0266     0.0125       -0.0584      0.0052  
+#>          -2   0.0000         NA            NA          NA  
+#>           0  -0.0398     0.0095       -0.0639     -0.0158 *
+#>           2  -0.0290     0.0114       -0.0582      0.0002  
+#>           4  -0.0070     0.0146       -0.0441      0.0301  
+#>           6  -0.0198     0.0167       -0.0623      0.0228  
+#>           8  -0.0138     0.0175       -0.0584      0.0308  
+#> ---
+#> Signif. codes: `*' confidence band does not cover 0
 ```
 
-## Three outcome estimators
+The results here indicate that job displacement reduces the occupation
+score, especially in the period right after job displacement occurs.
 
-We now estimate effects on `Y` in three ways:
+## Estimating the effect of displacement on earnings
 
-1.  **Include the bad control:** use the observed post-treatment `X` as
-    a covariate.
-2.  **Drop the bad control:** use only `Z` as a covariate.
-3.  **Use `badcontrols`:** recover the untreated version of `X` using
-    `W` and `Z`, then use it in the outcome comparison.
+[`didbc()`](https://github.com/hugosantanna/badcontrols/reference/didbc.md)’s
+main arguments mirror
+[`did::att_gt()`](https://bcallaway11.github.io/did/reference/att_gt.html)/[`ptetools::pte_default()`](https://rdrr.io/pkg/ptetools/man/pte_default.html),
+plus a few bad-control-specific ones: `bad_control_formula` (the bad
+control itself, `occ_score`), `bad_control_cov_formula` (the
+covariate(s) used to model its untreated evolution, `W`; here the
+outcome itself, as in the paper’s application), and `xformula` (the
+other covariates, `Z`).
 
-The first two specifications use
-[`ptetools::pte_default()`](https://rdrr.io/pkg/ptetools/man/pte_default.html).
-The third uses
-[`badcontrols::didbc()`](https://github.com/hugosantanna/badcontrols/reference/didbc.md)
-with the imputation estimator. All three use the same
-staggered-treatment setup and suppress the bootstrap so that the example
-runs quickly.
+Next, we provide estimates of the effect of job displacement on earnings
+with occupation score treated as a bad control. We use the imputation
+version of our estimator (`est_method = "imputation"`).
 
 ``` r
-pte_args <- list(
-  yname = "Y",
-  gname = "G",
-  tname = "period",
+res_imputation <- didbc(
+  yname = "log_earnings",
+  gname = "group",
+  tname = "year",
   idname = "id",
-  data = sim$data,
-  est_method = "reg",
-  control_group = "notyettreated",
-  base_period = "universal",
-  bstrap = FALSE,
-  cband = FALSE
-)
-
-include_bad_control <- do.call(
-  ptetools::pte_default,
-  c(pte_args, list(
-    xformula = ~Z + X,
-    d_covs_formula = ~X,
-    d_outcome = TRUE
-  ))
-)
-
-drop_bad_control <- do.call(
-  ptetools::pte_default,
-  c(pte_args, list(
-    xformula = ~Z,
-    d_covs_formula = ~-1,
-    d_outcome = TRUE
-  ))
-)
-
-badcontrols_imputation <- didbc(
-  yname = "Y",
-  gname = "G",
-  tname = "period",
-  idname = "id",
-  data = sim$data,
-  bad_control_formula = ~X,
-  bad_control_cov_formula = ~W,
-  xformula = ~Z,
+  data = nlsy_job_displacement,
+  bad_control_formula = ~occ_score,
+  bad_control_cov_formula = ~log_earnings,
+  xformula = ~ race + female + educ_max_grade,
   est_method = "imputation",
   control_group = "notyettreated",
   base_period = "universal",
-  bstrap = FALSE,
-  cband = FALSE
+  bstrap = FALSE
 )
+
+summary(res_imputation)
+#> 
+#> Overall ATT:  
+#>      ATT    Std. Error     [ 95%  Conf. Int.]  
+#>  -0.0672        0.0188    -0.1042     -0.0303 *
+#> 
+#> 
+#> Dynamic Effects:
+#>  Event Time Estimate Std. Error [95% Simult.  Conf. Band]  
+#>         -10  -0.0335     0.0517       -0.1832      0.1162  
+#>          -8   0.0028     0.0409       -0.1156      0.1211  
+#>          -6   0.0028     0.0241       -0.0671      0.0727  
+#>          -4  -0.0161     0.0237       -0.0846      0.0525  
+#>          -2   0.0000         NA            NA          NA  
+#>           0  -0.0995     0.0254       -0.1730     -0.0261 *
+#>           2  -0.1251     0.0375       -0.2336     -0.0166 *
+#>           4  -0.0518     0.0369       -0.1588      0.0552  
+#>           6   0.0364     0.0405       -0.0809      0.1537  
+#>           8   0.0472     0.0793       -0.1824      0.2768  
+#> ---
+#> Signif. codes: `*' confidence band does not cover 0
 ```
 
-The following plot compares the event-study estimates. Event time `-1`
-is normalized to zero by the universal-base-period convention.
+[`didbc()`](https://github.com/hugosantanna/badcontrols/reference/didbc.md)
+returns event studies alongside the overall ATT, which are plotted
+below.
 
 ``` r
-event_study_data <- function(result, estimator) {
-  data.frame(
-    event_time = result$event_study$egt,
-    estimate = result$event_study$att.egt,
-    se = result$event_study$se.egt,
-    estimator = estimator
-  )
-}
-
-outcome_event_studies <- rbind(
-  event_study_data(include_bad_control, "Include X"),
-  event_study_data(drop_bad_control, "Drop X"),
-  event_study_data(badcontrols_imputation, "badcontrols imputation")
-)
-
-ggplot(outcome_event_studies, aes(event_time, estimate, colour = estimator)) +
-  geom_hline(yintercept = 0, colour = "grey70") +
-  geom_vline(xintercept = -1, linetype = "dashed", colour = "grey70") +
-  geom_point(position = position_dodge(width = 0.15)) +
-  geom_errorbar(
-    aes(ymin = estimate - 1.96 * se, ymax = estimate + 1.96 * se),
-    width = 0,
-    position = position_dodge(width = 0.15),
-    na.rm = TRUE
-  ) +
-  labs(
-    x = "Event time",
-    y = "Estimated effect on Y",
-    colour = "Estimator"
-  ) +
-  theme_minimal()
+plot(res_imputation)
 ```
 
-![](bad-controls-coding_files/figure-html/plot-outcome-event-studies-1.png)
+![](bad-controls-coding_files/figure-html/plot-event-study-1.png)
 
-The conceptual motivation for these comparisons is discussed in the
-[conceptual
-vignette](https://github.com/hugosantanna/badcontrols/articles/bad-controls-conceptual.md).
-The package also provides parametric doubly robust and machine-learning
-estimators for the covariate-unconfoundedness approach.
+### Other estimators
+
+The same call works for the doubly robust and machine-learning
+estimators (`est_method = "dr_ml"`). Only the relevant arguments change:
+
+``` r
+# Doubly robust, parametric (OLS/logit) nuisance functions
+didbc(
+  yname = "log_earnings",
+  gname = "group",
+  tname = "year",
+  idname = "id",
+  data = nlsy_job_displacement,
+  bad_control_formula = ~occ_score,
+  bad_control_cov_formula = ~log_earnings,
+  xformula = ~ race + female + educ_max_grade,
+  est_method = "dr_ml",
+  nuisance_method = "parametric",
+  control_group = "notyettreated",
+  base_period = "universal",
+  bstrap = FALSE
+)
+
+# Doubly robust, cross-fitted machine-learning (grf) nuisance functions
+didbc(
+  yname = "log_earnings",
+  gname = "group",
+  tname = "year",
+  idname = "id",
+  data = nlsy_job_displacement,
+  bad_control_formula = ~occ_score,
+  bad_control_cov_formula = ~log_earnings,
+  xformula = ~ race + female + educ_max_grade,
+  est_method = "dr_ml",
+  nuisance_method = "ml",
+  control_group = "notyettreated",
+  base_period = "universal",
+  bstrap = FALSE
+)
+```
+
+Finally, instead of covariate unconfoundedness,
+[`didbc()`](https://github.com/hugosantanna/badcontrols/reference/didbc.md)
+also supports assuming *parallel trends for the bad control itself*
+(`bad_control_identification_strategy = "did"`). Since this approach
+requires an additional linearity condition, it is only available for
+`est_method = "imputation"`, and still uses `bad_control_cov_formula`
+(`W`) if supplied:
+
+``` r
+didbc(
+  yname = "log_earnings",
+  gname = "group",
+  tname = "year",
+  idname = "id",
+  data = nlsy_job_displacement,
+  bad_control_formula = ~occ_score,
+  bad_control_cov_formula = ~log_earnings,
+  xformula = ~ race + female + educ_max_grade,
+  est_method = "imputation",
+  bad_control_identification_strategy = "did",
+  control_group = "notyettreated",
+  base_period = "universal",
+  bstrap = FALSE
+)
+```
+
+Caetano, Carolina, Brantly Callaway, Stroud Payne, and Hugo Sant’Anna.
+2026. “Difference-in-Differences with Bad Controls.” *arXiv Preprint
+arXiv:2608.03881*. <https://arxiv.org/abs/2608.03881>.

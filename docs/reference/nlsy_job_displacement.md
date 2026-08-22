@@ -10,13 +10,13 @@ treatment is job displacement.
 ## Usage
 
 ``` r
-data(nlsy_application)
+data(nlsy_job_displacement)
 ```
 
 ## Format
 
 A data.frame with 19,386 rows and 8 columns: `id`, `year`,
-`log_earnings`, `occ_score`, `G_window`, `race`, `female`, and
+`log_earnings`, `occ_score`, `group`, `race`, `female`, and
 `educ_max_grade`.
 
 ## Source
@@ -43,16 +43,16 @@ for the construction script and provenance.
 ## Examples
 
 ``` r
-data(nlsy_application)
-head(nlsy_application)
-#>       id  year log_earnings occ_score G_window                   race female
-#>    <int> <int>        <num>     <num>    <int>                 <char> <lgcl>
-#> 1:     8  1992     9.798127  2.040221        0 non_black_non_hispanic   TRUE
-#> 2:     8  1994     9.928180  2.748872        0 non_black_non_hispanic   TRUE
-#> 3:     8  1996    10.085809  2.748872        0 non_black_non_hispanic   TRUE
-#> 4:     8  1998     9.998798  2.748872        0 non_black_non_hispanic   TRUE
-#> 5:     8  2000    10.218298  2.748872        0 non_black_non_hispanic   TRUE
-#> 6:     8  2002    10.357743  2.358675        0 non_black_non_hispanic   TRUE
+data(nlsy_job_displacement)
+head(nlsy_job_displacement)
+#>       id  year log_earnings occ_score group                   race female
+#>    <int> <int>        <num>     <num> <int>                 <char> <lgcl>
+#> 1:     8  1992     9.798127  2.040221     0 non_black_non_hispanic   TRUE
+#> 2:     8  1994     9.928180  2.748872     0 non_black_non_hispanic   TRUE
+#> 3:     8  1996    10.085809  2.748872     0 non_black_non_hispanic   TRUE
+#> 4:     8  1998     9.998798  2.748872     0 non_black_non_hispanic   TRUE
+#> 5:     8  2000    10.218298  2.748872     0 non_black_non_hispanic   TRUE
+#> 6:     8  2002    10.357743  2.358675     0 non_black_non_hispanic   TRUE
 #>    educ_max_grade
 #>             <int>
 #> 1:             14
@@ -61,7 +61,7 @@ head(nlsy_application)
 #> 4:             14
 #> 5:             14
 #> 6:             14
-table(nlsy_application$G_window[!duplicated(nlsy_application$id)])
+table(nlsy_job_displacement$group[!duplicated(nlsy_job_displacement$id)])
 #> 
 #>    0 1994 1996 1998 2000 2002 
 #> 2483  209  155  113  103  168 

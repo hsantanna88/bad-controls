@@ -1,161 +1,236 @@
 # Difference-in-Differences with Bad Controls: A Conceptual Guide
 
 `badcontrols` implements difference-in-differences methods for settings
-in which a time-varying covariate is affected by treatment. This
-vignette gives the main intuition. The formal results are in [Caetano,
-Callaway, Payne, and Sant’Anna
-(2024)](https://arxiv.org/abs/2405.10557).
+in which a time-varying covariate is affected by treatment (a “bad
+control”). This vignette provides an intuitive overview of bad controls
+based on our paper Caetano et al.
+([2026](#ref-caetano-callaway-payne-santanna-2026)).
 
 ## The bad-control tension
 
 Difference-in-differences is often more credible after conditioning on
-covariates. For example, outcome trends may be more comparable for
-workers who began in similar occupations. But a covariate can be useful
-for explaining untreated outcome trends and still be affected by
+covariates, but it is common in empirical applications to have variables
+that we would like to (in some sense) control for that themselves may be
+affected by the treatment. In the application in our paper, we study the
+effects of job displacement on a person’s earnings. In this context, it
+seems reasonable to want to compare people that work in similar
+occupations, but job displacement can itself change a person’s
+occupation. In this case, occupation is a “bad control” because (1) it
+is affected by the treatment but also (2) seems to be an important
+covariate.
+
+Since difference-in-differences identification strategies have
+traditionally been implemented using a two-way fixed effects (TWFE)
+regression like
+$$Y_{it} = \theta_{t} + \eta_{i} + \alpha D_{it} + \beta X_{it} + e_{it}$$
+where $\theta_{t}$ and $\eta_{i}$ are time and unit fixed effects,
+$D_{it}$ is the treatment indicator, and $X_{it}$ is a covariate, for a
+researcher that is worried about $X_{it}$ being a bad control, the
+natural question is whether to include $X_{it}$ in the regression or not
+(both of which have problems):
+
+- **Option 1: Include the bad control:** Including the bad control
+  results in conditioning on a post-treatment variable. Comparisons are
+  then made among treated and untreated units with the same observed
+  post-treatment covariate, which is not the right comparison when the
+  covariate is affected by the treatment.
+
+This option is not very popular in empirical work in economics—to our
+knowledge, the only times empirical researchers ever purposefully
+include a bad control as a regressor are in supplementary robustness
+checks. It has been widely criticized, probably most notably in *Mostly
+Harmless Econometrics* ([Angrist and Pischke
+2008](#ref-angrist-pischke-2008)).
+
+- **Option 2: Drop the bad control:** In other words, run the regression
+  above dropping the $\beta X_{it}$ term. This approach avoids
+  conditioning on a post-treatment variable, but it drops the covariate
+  entirely. In our application, this would mean that we would not even
+  attempt to compare individuals in the same occupations at all.
+
+In contrast to Option 1, Option 2 is very popular in empirical work. To
+us, it seems like this has its own issues, that could be just as bad as
+including the bad control. To drop the bad control entirely effectively
+says that the bad control was never needed as a covariate at all. Or, in
+words, the leading solution the bad control problem is to pretend that
+the covariate was never needed in the first place.
+
+## Alternative approaches
+
+We provide alternative approaches in our paper. The key insight involves
+(1) introducing a notion of treated and untreated potential versions of
+the bad control and (2) trying to control for the untreated potential
+version of the bad control.
+
+To provide more detail, let us introduce some more notation. We will
+consider the setting with two time periods: $t^{*}$ and $t^{*} - 1$. In
+the first period, no units are treated, and in the second period, some
+units (the treated group) become treated while other units (the
+untreated group) remain untreated. We use $D_{i}$ to be an indicator for
+being in the treated group, $Y_{it}$ to denote the outcome, and $X_{it}$
+to denote the bad control. Finally, let $Z_{i}$ denote a vector of other
+exogenous covariates, which can include time-invariant and/or
+time-varying covariates. Next, let $Y_{it}(1)$ and $Y_{it}(0)$ denote
+the treated and untreated potential outcomes, respectively, and let
+$X_{it}(1)$ and $X_{it}(0)$ denote the treated and untreated potential
+bad controls, respectively. Since no one is treated in the first period,
+we have $Y_{it^{*} - 1} = Y_{it^{*} - 1}(0)$ and
+$X_{it^{*} - 1} = X_{it^{*} - 1}(0)$. In the second period, we observe
+$Y_{it^{*}} = D_{i}Y_{it^{*}}(1) + (1 - D_{i})Y_{it^{*}}(0)$ and
+$X_{it^{*}} = D_{i}X_{it^{*}}(1) + (1 - D_{i})X_{it^{*}}(0)$ (i.e., we
+observe treated potential outcomes and treated potential bad controls
+for treated units, and untreated potential outcomes and untreated
+potential bad controls for untreated units). This notation explicitly
+allows for $X_{it}$ to be a bad control as it can be the case that
+$X_{it}(1) \neq X_{it}(0)$. Following the difference-in-differences
+literature, we target the average treatment effect on the treated (ATT):
+
+\$\$ \ATT = \E\[Y\_{t^\*}(1) - Y\_{t^\*}(0) \mid D=1\]. \$\$
+
+and we make the following parallel trends assumption:
+
+\$\$ \E\[\Delta Y\_{t^\*}(0) \mid X\_{t^\*}(0), X\_{t^\*-1}, Z, D=1\] =
+\E\[\Delta Y\_{t^\*}(0) \mid X\_{t^\*}(0), X\_{t^\*-1}, Z, D=0\], \$\$
+
+This assumption is exactly the same as the conditional parallel trends
+assumptions in the difference-in-differences literature ([Heckman et al.
+1997](#ref-heckman-ichimura-todd-1997); [Callaway and Sant’Anna
+2021](#ref-callaway-santanna-2021)). It says that, in the absence of the
+treatment, the trend in untreated potential outcomes would have been the
+same for treated and untreated units with the same covariates. Notice
+that, unlike Options 1 and 2 above, this assumption uses $X_{it}$ as a
+genuine control while also allowing for it to be affected by the
 treatment.
 
-This creates a tension:
+The challenge is that the untreated potential version of the bad
+control, $X_{t^{*}}(0)$, is not observed for treated units. This makes
+the explicit comparison between treated and untreated units with the
+same $X_{t^{*}}(0)$ infeasible. We propose two approaches to dealing
+with this challenge, though we note that any approach is going to
+require some additional assumptions, and so a real possibility in a
+given application is that the researcher is just not able to credibly
+recover the \$\ATT\$ in the presence of a bad control.
 
-- **Include the post-treatment covariate:** this conditions on a
-  variable that treatment may have changed. Comparisons are then made
-  among treated and untreated units with the same observed
-  post-treatment covariate, even though the treated unit’s value may be
-  part of the treatment effect.
-- **Drop the covariate:** this avoids conditioning on a
-  treatment-induced variable, but it changes the parallel-trends
-  assumption. If the covariate is genuinely needed to explain untreated
-  outcome trends, dropping it does not solve the original identification
-  problem.
+## New Approach 1: Condition on the pre-treatment bad control
 
-This is the usual bad-control concern discussed in causal inference and
-econometrics. See, for example, [Angrist and Pischke’s *Mostly Harmless
-Econometrics*](https://economics.mit.edu/sites/default/files/publications/Mostly%20Harmless%20Econometrics.pdf).
-The point is not that post-treatment variables are never informative. It
-is that their observed values are not automatically valid controls for a
-causal effect.
+A very simple approach to dealing with a bad control is to condition
+only on its value on the pre-treatment period, $X_{t^{*} - 1}$. This is
+not so straightforward when implementing difference-in-differences via a
+TWFE regression, but it is straightforward with the Callaway and
+Sant’Anna ([2021](#ref-callaway-santanna-2021)) estimator. In fact, in
+their `R` implementation in the `did` package, the default approach to
+dealing with a time-varying covariate is to include its level in the
+pre-treatment period, which is exactly what we suggest here.
 
-## Potential versions of the bad control
+What additional assumptions rationalize this approach? In the paper, we
+provide two cases where it will hold. One under the following
+unconfoundedness assumption for the bad control (we call this assumption
+“simple covariate unconfoundedness” in our paper):
 
-Let (D) denote treatment, (Y_t) the outcome, and (X_t) the time-varying
-covariate. Let (t^*-1) be the pre-treatment period and (t^*) the
-post-treatment period. We distinguish two potential versions of the bad
-control in the post-treatment period:
+\$\$ X\_{t^\*}(0) \independent D \mid X\_{t^\*-1}, Z. \$\$
 
-\[ X\_{t^*}(1) X\_{t^*}(0). \]
+This assumption implies that we can learn about how the untreated bad
+control would have evolved in the absence of treatment, by comparing
+untreated units with the same pre-treatment value of the bad control and
+other covariates. The post-treatment bad control does not need to be
+included as a covariate in the final outcome comparison as this
+assumption implies that it is already balanced between the treated and
+untreated group conditional on the pre-treatment bad control and other
+covariates. The other case that rationalizes this approach is when the
+$X_{t^{*}}(0)$ is redundant in the parallel trends assumption after
+conditioning on $X_{t^{*} - 1}$ and $Z$, i.e., it does not separately
+affect the trend in untreated potential outcomes after conditioning on
+the pre-treatment bad control and other covariates.
 
-The first is the value under treatment and the second is the value that
-would have been observed without treatment. For untreated units, we
-observe `X_{t^*} = X_{t^*}(0)`. For treated units, we observe
-`X_{t^*} = X_{t^*}(1)`; their untreated potential value `X_{t^*}(0)` is
-missing.
+## New Approach 2: Covariate unconfoundedness for the bad control
 
-The paper’s target is the average treatment effect on the treated,
+The specific version of unconfoundedness that we discussed above leads
+to a convenient estimator, but it’s not necessarily the most plausible
+one. Notice that, the parallel trends assumption involved the *change*
+in untreated potential outcomes, while the left hand side involved the
+*level* of the bad control (rather than its change). One would expect
+that the number of conditioning variables needed to make an
+unconfoundedness assumption plausible is larger for a level than a
+change, which suggests a modified unconfoundedness assumption (we call
+this assumption “covariate unconfoundedness” in our paper):
 
-\[ = . \]
+\$\$ X\_{t^\*}(0) \independent D \mid X\_{t^\*-1}, W, Z. \$\$
 
-The relevant parallel-trends condition is therefore stated using the
-untreated potential bad control:
+What is $W$? The short version is that it is any additional covariates
+that are needed to make unconfoundedness hold. But a leading example is
+to take $W$ to be the pre-treatment outcome. In our application, this
+would say that, in the absence of treatment, occupation would have
+evolved in the same way for displaced and non-displaced workers with the
+same pre-treatment occupation, pre-treatment earnings, and other
+covariates. Under this assumption,
 
-\[ = , \]
+\$\$ \ATT = \E\[\Delta Y\_{t^\*} \mid D=1\] - \E\Big\[ \E\big\[
+\E\[\Delta Y\_{t^\*} \mid X\_{t^\*}, X\_{t^\*-1}, Z\] \bigm\|
+X\_{t^\*-1}, W, Z, D=0 \big\] \Bigm\| D=1 \Big\] \$\$
 
-where (Z) denotes other covariates and (Y\_{t^*}(0) = Y\_{t^*}(0) -
-Y\_{t^\*-1}(0)). In words, treated and untreated units would have had
-the same average untreated outcome change after conditioning on the
-covariates that would have been present without treatment.
+A rough explanation for this equation (starting from the inside out) is
+that we find the trend in outcomes over time as a function of
+$X_{t^{*}},X_{t^{*} - 1},Z$ among untreated units. Then, we account for
+the bad control being affected by the treatment by using the
+distribution of bad control from the untreated group given exogenous
+covariates $Z$ and $W$ but using the distribution of these from the
+treated group—you can see the paper for more details.
 
-The difficulty is immediate: the parallel-trends condition uses
-`X_{t^*}(0)`, but that value is not observed for treated units. Simply
-using their observed `X_{t^*}(1)` conditions on a treatment-induced
-variable. Simply omitting `X_{t^*}` imposes a stronger assumption that
-the post-treatment bad control was never needed for parallel trends.
+`badcontrols` implements imputation, doubly robust, and machine learning
+estimators building on this result.
 
-## Two ways to recover the untreated version
+### Conceptual side-discussion:
 
-The paper develops two approaches. Both allow the treatment to affect
-the bad control and both allow the bad control to matter for untreated
-outcome trends. They differ in how they recover the distribution of
-`X_{t^*}(0)` for treated units.
+The approaches that we emphasize in the paper both involve
+unconfoundedness assumptions. But it’s helpful to think about dealing
+with bad controls at a slightly higher level. In particular, our
+approach fundamentally proposes an identification strategy for the
+outcome that allows us to back out the distribution of untreated
+potential bad controls for the treated group. Then, we use this
+counterfactual distribution in the parallel trends assumption to recover
+the ATT.
 
-### 1. Condition on the pre-treatment bad control
+An implication of this discussion is that one could use alternative
+identifying assumptions in place of unconfoundedness. A natural
+alternative would be to assume parallel trends for the bad control too.
+The challenge here is that parallel trends is usually useful for
+recovering the mean of untreated potential outcomes rather than its
+entire distribution (see, e.g., Athey and Imbens
+([2006](#ref-athey-imbens-2006)); Callaway and Li
+([2019](#ref-callaway-li-2019))), and we really need the entire
+distribution. That said, we show in the paper that, under an additional
+linearity assumption, one can use parallel trends for the bad control.
+We implement this estimator in `badcontrols` as
+`didbc(..., est_method = "imputation", bad_control_identification_strategy = "did")`.
 
-The first approach assumes that the untreated potential evolution of the
-bad control is unconfounded by treatment after conditioning on its
-pre-treatment value and other covariates:
+## Conclusion
 
-\[ X\_{t^*}(0) D X\_{t^*-1}, Z. \]
+Our paper provides new approaches to dealing with bad controls in
+difference-in-differences applications. Our approaches respect the
+nature of a bad control, namely, that it is needed as a covariate for
+identification but it is also affected by the treatment.
 
-Under this assumption, untreated units with the same ((X\_{t^\*-1}, Z))
-reveal how the bad control would have evolved for treated units in the
-absence of treatment. The post-treatment bad control does not need to be
-included as a covariate in the final outcome comparison. The resulting
-ATT has the familiar difference-in-differences form, using the
-pre-treatment bad control and `Z` as covariates.
+## References
 
-In practice, this approach can be implemented with the
-[Callaway–Sant’Anna](https://doi.org/10.1016/j.jeconom.2020.12.001)
-estimator, using the pre-treatment value of the bad control as a
-covariate. In `badcontrols`, the corresponding bad-control-specific
-imputation and doubly-robust implementations are available through
-[`didbc()`](https://github.com/hugosantanna/badcontrols/reference/didbc.md).
+Angrist, Joshua D, and Jorn-Steffen Pischke. 2008. *Mostly Harmless
+Econometrics: An Empiricist’s Companion*. Princeton University Press.
 
-### 2. Covariate unconfoundedness for the bad control
+Athey, Susan, and Guido Imbens. 2006. “Identification and Inference in
+Nonlinear Difference-in-Differences Models.” *Econometrica* 74 (2):
+431–97.
 
-The second approach allows additional variables (W) to be needed for
-modeling the untreated evolution of the bad control:
+Caetano, Carolina, Brantly Callaway, Stroud Payne, and Hugo Sant’Anna.
+2026. “Difference-in-Differences with Bad Controls.” *arXiv Preprint
+arXiv:2608.03881*. <https://arxiv.org/abs/2608.03881>.
 
-\[ X\_{t^*}(0) D X\_{t^*-1}, W, Z. \]
+Callaway, Brantly, and Tong Li. 2019. “Quantile Treatment Effects in
+Difference in Differences Models with Panel Data.” *Quantitative
+Economics* 10 (4): 1579–618.
 
-For example, (W) can be the pre-treatment outcome. This assumption says
-that among units with the same pre-treatment bad control, `W`, and `Z`,
-the untreated potential value of the bad control has the same
-distribution for treated and untreated units.
+Callaway, Brantly, and Pedro HC Sant’Anna. 2021.
+“Difference-in-Differences with Multiple Time Periods.” *Journal of
+Econometrics* 225 (2): 200–230.
 
-This approach has two steps. First, use untreated units to learn the
-distribution of `X_{t^*}(0)` conditional on `(X_{t^*-1}, W, Z)`. Second,
-use that recovered distribution inside the conditional parallel-trends
-comparison. The resulting estimand involves nested conditional
-expectations.
-
-`badcontrols` provides imputation and doubly robust estimators for this
-approach. The nuisance functions for the doubly robust estimator can be
-fit parametrically or with cross-fitted machine learning methods.
-
-## Job displacement example
-
-The paper applies these ideas to the effect of job displacement on
-earnings. Let:
-
-- (Y_t) be a worker’s log earnings;
-
-- (X_t) be an occupation score, defined as the typical log wage in the
-  worker’s occupation;
-
-- 23. be pre-treatment log earnings; and
-
-- 26. include race, sex, and education.
-
-Occupation is a natural bad control. Parallel trends may be more
-plausible after conditioning on the occupation a worker would have held
-without job displacement. At the same time, displacement can move
-workers into different occupations, so the observed post-displacement
-occupation score may itself be affected by treatment.
-
-The covariate-unconfoundedness approach asks us to use non-displaced
-workers with the same pre-treatment occupation, pre-treatment earnings,
-and other covariates to learn how a displaced worker’s occupation would
-have evolved without displacement. We then use those untreated
-occupation paths when estimating the effect of displacement on earnings.
-
-The package’s application dataset and code examples use the NLSY79
-sample from 1992–2002. The coding vignette will show how to reproduce
-the application with `nlsy_application` and
-[`didbc()`](https://github.com/hugosantanna/badcontrols/reference/didbc.md).
-
-## Further reading
-
-- [Package
-  README](https://github.com/hugosantanna/badcontrols/README.md)
-- [Paper: *Difference-in-Differences with Bad
-  Controls*](https://arxiv.org/abs/2405.10557)
-- The planned [coding
-  vignette](https://github.com/hugosantanna/badcontrols/articles/bad-controls-coding.md)
+Heckman, James, Hidehiko Ichimura, and Petra Todd. 1997. “Matching as an
+Econometric Evaluation Estimator: Evidence from Evaluating a Job
+Training Programme.” *The Review of Economic Studies* 64 (4): 605–54.

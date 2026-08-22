@@ -26,7 +26,7 @@ and overall ATT alongside the data for testing estimators against."></head><body
       <ul class="navbar-nav me-auto"><li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/bad-controls-coding.html">Difference-in-Differences with Bad Controls: A Coding Example</a></li>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/bad-controls-coding.html">Mini Application on Job Displacement</a></li>
     <li><a class="dropdown-item" href="../articles/bad-controls-conceptual.html">Difference-in-Differences with Bad Controls: A Conceptual Guide</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
@@ -253,13 +253,13 @@ OLS Step 1.</p>
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">sim</span> <span class="op">&lt;-</span> <span class="fu">simulate_bad_controls</span><span class="op">(</span>n <span class="op">=</span> <span class="fl">500</span>, dgp <span class="op">=</span> <span class="st">"dgp1"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">sim</span><span class="op">$</span><span class="va">data</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   id period G D          Y          X         Z          W</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1  1      1 0 0 -1.1010691 -0.7336020 -1.675990 -1.3497984</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2  1      2 0 0 -1.2024615 -1.0611615 -1.675990 -1.3497984</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3  1      3 0 0 -1.0881218 -1.0855523 -1.675990 -1.3497984</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4  1      4 0 0 -1.4067053 -1.1984356 -1.675990 -1.3497984</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 5  2      1 2 0  0.6013597  0.3189168  0.859543  0.1443711</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 6  2      2 2 1  2.0100607  1.0625812  0.859543  0.1443711</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   id period G D         Y          X           Z          W</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1  1      1 4 0  1.185892  0.3089757 -0.17560174  0.5658066</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2  1      2 4 0  1.378625  0.2769257 -0.17560174  0.5658066</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3  1      3 4 0  1.797714  0.3701416 -0.17560174  0.5658066</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4  1      4 4 1  2.800784  0.9937173 -0.17560174  0.5658066</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5  2      1 0 0 -2.580735 -1.6081289  0.05229465 -1.8321816</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 6  2      2 0 0 -1.908841 -0.9039224  0.05229465 -1.8321816</span>
 <span class="r-in"><span><span class="va">sim</span><span class="op">$</span><span class="va">true_att_gt</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   g t  att</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1 2 2 1.00</span>

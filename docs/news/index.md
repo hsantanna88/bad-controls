@@ -2,6 +2,9 @@
 
 ## badcontrols 0.1.2
 
+- Renamed the bundled application dataset `nlsy_application` to
+  `nlsy_job_displacement`, and its `G_window` column to `group`
+  (breaking change). No other columns changed.
 - Renamed the main estimating function `bc_att_gt()` to
   [`didbc()`](https://github.com/hugosantanna/badcontrols/reference/didbc.md)
   (breaking change). No arguments changed.

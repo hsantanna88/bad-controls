@@ -4,8 +4,8 @@
 
 A common tension in empirical work involves covariates that are affected
 by the treatment (aka “bad controls”), where there is an argument for
-(at least in some sense) trying to control for them, but also good
-reasons to avoid them. In Caetano, Callaway, Payne, and Sant’Anna
+(at least in some sense) trying to control for them, but there are also
+issues that arise when controlling for them directly. In Caetano et al.
 (2026), in the context of difference-in-differences identification
 strategies, we provide two approaches to dealing with bad controls that
 respect the bad control being affected by the treatment while playing a
@@ -36,17 +36,15 @@ which follows a syntax similar to
 and
 [`ptetools::pte_default()`](https://rdrr.io/pkg/ptetools/man/pte_default.html).
 
-## Additional Resources
+## Additional resources
 
-- Paper: [Difference-in-Differences with “Bad
-  Controls”](https://arxiv.org/abs/2405.10557), by Caetano, Callaway,
-  Payne, and Sant’Anna.
+- Paper: Caetano et al. (2026).
 
 - [Conceptual
   vignette](https://github.com/hugosantanna/badcontrols/vignettes/bad-controls-conceptual.md)
 
 - [Application/Coding
-  vignette](https://github.com/hugosantanna/badcontrols/vignettes/bad-controls-coding.md).
+  vignette](https://github.com/hugosantanna/badcontrols/vignettes/bad-controls-coding.md)
 
 ## Installation
 
@@ -61,7 +59,7 @@ remotes::install_github("hugosantanna/badcontrols")
 
 The package includes a simulation with a treatment-affected covariate
 `X` and exogenous covariate `Z`. The demo here is based on the covariate
-unconfoundedness assumption (approach 2 above), where we assume that
+unconfoundedness assumption (New Approach 2 above), where we assume that
 unconfoundedness holds for the bad control after conditioning on the
 exogenous covariate `Z`, the pre-treatment value of the bad control, and
 the lagged outcome. The data that we generate below is a panel with 2000
@@ -100,21 +98,61 @@ res <- didbc(
   bstrap = FALSE
 )
 
-extract_att(res)
+summary(res)
 ```
 
 ``` R
-$att
-[1] 1.455921
+Overall ATT:  
+    ATT    Std. Error     [ 95%  Conf. Int.]  
+ 1.4559        0.0303     1.3965      1.5153 *
 
-$se
-[1] 0.03035536
+
+Dynamic Effects:
+ Event Time Estimate Std. Error [95% Simult.  Conf. Band]  
+         -2  -0.0323     0.0405       -0.1400      0.0754  
+         -1   0.0780     0.0446       -0.0408      0.1968  
+          0   1.0931     0.0282        1.0179      1.1683 *
+          1   1.7832     0.0337        1.6935      1.8729 *
+          2   2.4412     0.0553        2.2940      2.5884 *
+---
+Signif. codes: `*' confidence band does not cover 0
 ```
 
 The same interface can be used with `est_method = "imputation"` or with
 `nuisance_method = "ml"` for cross-fitted machine-learning nuisance
 estimates.
 
+## Citation
+
+To cite the paper underlying this package:
+
+> Caetano, C., Callaway, B., Payne, S., and Sant’Anna, H. (2026).
+> “Difference-in-Differences with Bad Controls.” arXiv preprint
+> arXiv:2608.03881. <https://arxiv.org/abs/2608.03881>
+
+``` R
+@article{caetano2026badcontrols,
+  title   = {Difference-in-Differences with Bad Controls},
+  author  = {Caetano, Carolina and Callaway, Brantly and Payne, Stroud and Sant'Anna, Hugo},
+  journal = {arXiv preprint arXiv:2608.03881},
+  year    = {2026},
+  url     = {https://arxiv.org/abs/2608.03881}
+}
+```
+
+To cite the `badcontrols` package itself, run `citation("badcontrols")`
+in R.
+
 ## License
 
 GPL (\>= 3)
+
+## References
+
+Caetano, Carolina, Brantly Callaway, Stroud Payne, and Hugo Sant’Anna.
+2026. “Difference-in-Differences with Bad Controls.” *arXiv Preprint
+arXiv:2608.03881*. <https://arxiv.org/abs/2608.03881>.
+
+Callaway, Brantly, and Pedro HC Sant’Anna. 2021.
+“Difference-in-Differences with Multiple Time Periods.” *Journal of
+Econometrics* 225 (2): 200–230.

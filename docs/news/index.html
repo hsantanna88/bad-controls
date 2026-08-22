@@ -18,7 +18,7 @@
       <ul class="navbar-nav me-auto"><li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/bad-controls-coding.html">Difference-in-Differences with Bad Controls: A Coding Example</a></li>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/bad-controls-coding.html">Mini Application on Job Displacement</a></li>
     <li><a class="dropdown-item" href="../articles/bad-controls-conceptual.html">Difference-in-Differences with Bad Controls: A Conceptual Guide</a></li>
   </ul></li>
 <li class="active nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
@@ -39,7 +39,8 @@
 
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.1.2" id="badcontrols-012">badcontrols 0.1.2<a class="anchor" aria-label="anchor" href="#badcontrols-012"></a></h2>
-<ul><li>Renamed the main estimating function <code>bc_att_gt()</code> to <code><a href="../reference/didbc.html">didbc()</a></code> (breaking change). No arguments changed.</li>
+<ul><li>Renamed the bundled application dataset <code>nlsy_application</code> to <code>nlsy_job_displacement</code>, and its <code>G_window</code> column to <code>group</code> (breaking change). No other columns changed.</li>
+<li>Renamed the main estimating function <code>bc_att_gt()</code> to <code><a href="../reference/didbc.html">didbc()</a></code> (breaking change). No arguments changed.</li>
 <li>Added <code>num_threads</code> argument to <code><a href="../reference/didbc.html">didbc()</a></code> and <code><a href="../reference/dr_ml_attgt.html">dr_ml_attgt()</a></code> to control the number of threads <code>grf</code> uses for its forests under <code>nuisance_method = "ml"</code>. Default <code>NULL</code> preserves the existing behavior (<code>grf</code>’s own auto-detection); set to <code>1</code> to pin a single thread, e.g. for Monte Carlo work run with outer parallelism across replications.</li>
 </ul></div>
     <div class="section level2">
