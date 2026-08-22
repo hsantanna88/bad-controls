@@ -159,6 +159,9 @@ A \code{pte_results} object containing:
 \describe{
 \item{overall_att}{Overall ATT estimate and SE}
 \item{att_gt}{Group-time specific ATT estimates}
+\item{event_study}{Dynamic (event-time) ATT estimates and SEs}
+\item{ptep}{Internal \code{ptetools} parameters object, used by
+\code{summary()}/\code{plot()}/\code{autoplot()} methods}
 }
 }
 \description{
@@ -169,7 +172,7 @@ estimation methods.
 }
 \details{
 This function implements the methods from Caetano, Callaway, Payne, and
-Sant'Anna (2024). Two estimation approaches are available:
+Sant'Anna (2026). Two estimation approaches are available:
 
 \strong{Imputation} (\code{est_method = "imputation"}):
 \enumerate{
@@ -205,6 +208,7 @@ res_imp <- didbc(
 
 }
 \references{
-Caetano, C., Callaway, B., Payne, S., and Sant'Anna, H. (2024).
-"Difference-in-Differences with Bad Controls."
+Caetano, C., Callaway, B., Payne, S., and Sant'Anna, H. (2026).
+"Difference-in-Differences with Bad Controls." arXiv preprint
+arXiv:2608.03881. \doi{10.48550/arXiv.2608.03881}
 }

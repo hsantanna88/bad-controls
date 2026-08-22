@@ -3,12 +3,12 @@
 # Description: Generates staggered DiD panel data with known group-time,
 #   event-study, and overall ATT, for testing bad-control estimators. dgp1
 #   and dgp3 match the Monte Carlo designs in Caetano, Callaway, Payne, and
-#   Sant'Anna (2024); dgp2/dgp4/dgp5 are this package's own designs (dgp2 was
+#   Sant'Anna (2026); dgp2/dgp4/dgp5 are this package's own designs (dgp2 was
 #   originally a literal replica of the paper's "Nonlinear W" design, but was
-#   redesigned here after finding it pathological -- see Details -- pending
-#   the paper itself being updated to match).
+#   redesigned here after finding it pathological -- see Details -- and the
+#   paper's own DGP2 was subsequently redesigned to match).
 # Author: Brant Callaway
-# Last update: 2026-07-28
+# Last update: 2026-08-22
 # Date created: 2026-07-25
 # =============================================================================
 
@@ -16,7 +16,7 @@
 #'
 #' @description Generates a staggered difference-in-differences panel
 #'   dataset matching the Monte Carlo designs in Caetano, Callaway, Payne,
-#'   and Sant'Anna (2024), where a time-varying covariate X is affected by
+#'   and Sant'Anna (2026), where a time-varying covariate X is affected by
 #'   treatment (a bad control). Returns the known group-time, event-study,
 #'   and overall ATT alongside the data for testing estimators against.
 #'
@@ -82,22 +82,24 @@
 #'     that dropping the bad control entirely stays nearly unbiased there
 #'     specifically.
 #'   \item dgp2: \eqn{0.7 X_{i,t-1}(0) + 0.3Z_i + 0.2W_i + 0.03 W_i^2 + 0.15}.
-#'     This package's own "nonlinear W" design -- not (yet) a literal replica
-#'     of the paper's own DGP2. The paper's original coefficients
-#'     (\eqn{0.15W_i^2} added to dgp1's equation) put the quadratic term's
-#'     vertex at \eqn{W = -0.667}, well inside \eqn{W}'s support
-#'     (\eqn{SD(W) \approx 0.88}), making the map from \eqn{W} to
+#'     The "nonlinear W" design, matching the paper's own DGP2 exactly. An
+#'     earlier version of the paper's DGP2 used a larger quadratic
+#'     coefficient (\eqn{0.15W_i^2} added to dgp1's equation), which put the
+#'     quadratic term's vertex at \eqn{W = -0.667}, well inside \eqn{W}'s
+#'     support (\eqn{SD(W) \approx 0.88}), making the map from \eqn{W} to
 #'     \eqn{X_{it}(0)} two-to-one for nearly the whole population -- a
 #'     pathological non-monotonicity, not just "nonlinearity," that
-#'     specifically breaks \code{dr_ml_attgt()}'s \eqn{\omega_0} (which
+#'     specifically broke \code{dr_ml_attgt()}'s \eqn{\omega_0} (which
 #'     conditions on \eqn{(X_{it}, X_{i,t-1}, Z)}, not \eqn{W}, and so must
-#'     implicitly marginalize over a non-invertible \eqn{W}). This dgp2 keeps
-#'     the same linear coefficient on \eqn{W} as dgp1 (0.2, so it still reads
-#'     as "dgp1 plus one added wrinkle"), but with a small enough quadratic
-#'     coefficient (0.03) that the vertex sits at \eqn{W = -3.33} (about 3.8
-#'     SDs out) -- safely beyond what any realistic sample reaches, while
-#'     still contributing a real, detectable nonlinearity (about 13\% of the
-#'     linear term's own size at 1 SD of \eqn{W}, versus the paper's 66\%).
+#'     implicitly marginalize over a non-invertible \eqn{W}). This package's
+#'     dgp2 keeps the same linear coefficient on \eqn{W} as dgp1 (0.2, so it
+#'     still reads as "dgp1 plus one added wrinkle"), but with a small
+#'     enough quadratic coefficient (0.03) that the vertex sits at
+#'     \eqn{W = -3.33} (about 3.8 SDs out) -- safely beyond what any
+#'     realistic sample reaches, while still contributing a real, detectable
+#'     nonlinearity (about 13\% of the linear term's own size at 1 SD of
+#'     \eqn{W}). The paper's own DGP2 was subsequently redesigned to use
+#'     this same \eqn{0.03W_i^2} coefficient, so the two now match exactly.
 #'   \item dgp3: \eqn{0.7 X_{i,t-1}(0) + 0.3Z_i + 0.4 X_{i,t-1}(0) Z_i +
 #'     0.2 X_{i,t-1}(0)^2 + 0.15} (no W). Matches the paper's actual Monte
 #'     Carlo design.

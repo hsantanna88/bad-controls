@@ -178,9 +178,29 @@ cell: if any unit's fitted propensity exceeds
 and offending unit IDs.
 }
 }
+\examples{
+\dontrun{
+# dr_ml_attgt() is normally called internally as didbc()'s attgt_fun
+# (via ptetools::pte()), not invoked directly. This is the standard way
+# to reach it end-to-end; slow due to cross-fitted random forests plus
+# the multiplier bootstrap, hence \dontrun.
+sim <- simulate_bad_controls(n = 500)
+res <- didbc(
+  yname = "Y", gname = "G", tname = "period", idname = "id",
+  data = sim$data,
+  bad_control_formula = ~X,
+  xformula = ~Z,
+  est_method = "dr_ml",
+  nuisance_method = "parametric"
+)
+summary(res)
+}
+
+}
 \references{
-Caetano, C., Callaway, B., Payne, S., and Sant'Anna, H. (2024).
-"Difference-in-Differences with Bad Controls."
+Caetano, C., Callaway, B., Payne, S., and Sant'Anna, H. (2026).
+"Difference-in-Differences with Bad Controls." arXiv preprint
+arXiv:2608.03881. \doi{10.48550/arXiv.2608.03881}
 
 Sant'Anna, P.H.C. and Zhao, J. (2020). "Doubly Robust
 Difference-in-Differences Estimators." \emph{Journal of Econometrics}.
