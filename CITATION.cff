@@ -1,8 +1,8 @@
 cff-version: 1.2.0
 message: "If you use this software, please cite it as below."
 title: "badcontrols: Difference-in-Differences with Bad Controls"
-version: 0.1.2
-date-released: 2026-07-25
+version: 1.0.0
+date-released: 2026-08-22
 url: "https://github.com/hugosantanna/badcontrols"
 license: "GPL-3.0-or-later"
 authors:

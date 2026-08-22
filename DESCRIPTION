@@ -1,6 +1,6 @@
 Package: badcontrols
 Title: Difference-in-Differences with Bad Controls
-Version: 0.1.2
+Version: 1.0.0
 Authors@R: c(
     person("Carolina", "Caetano", role = "aut",
            email = "ccaetano@uga.edu"),

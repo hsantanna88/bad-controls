@@ -4,7 +4,7 @@
 
 <!-- badges: start -->
 
-[![Version](https://img.shields.io/badge/version-0.1.2-blue.svg)](https://github.com/hugosantanna/badcontrols)
+[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/hugosantanna/badcontrols)
 [![R](https://img.shields.io/badge/R-%3E%3D%204.1-blue.svg)](https://cran.r-project.org/)
 [![License: GPL
 v3](https://img.shields.io/badge/License-GPL%20v3-green.svg)](https://www.gnu.org/licenses/gpl-3.0)
@@ -109,16 +109,16 @@ summary(res)
 
     Overall ATT:  
         ATT    Std. Error     [ 95%  Conf. Int.]  
-     1.4559        0.0303     1.3965      1.5153 *
+     1.4559        0.0304     1.3964      1.5154 *
 
 
     Dynamic Effects:
-     Event Time Estimate Std. Error [95% Simult.  Conf. Band]  
-             -2  -0.0323     0.0405       -0.1400      0.0754  
-             -1   0.0780     0.0446       -0.0408      0.1968  
-              0   1.0931     0.0282        1.0179      1.1683 *
-              1   1.7832     0.0337        1.6935      1.8729 *
-              2   2.4412     0.0553        2.2940      2.5884 *
+     Event Time Estimate Std. Error [95% Pointwise  Conf. Band]  
+             -2  -0.0323     0.0369         -0.1047      0.0401  
+             -1   0.0780     0.0315          0.0163      0.1397 *
+              0   1.0931     0.0239          1.0462      1.1400 *
+              1   1.7832     0.0368          1.7111      1.8553 *
+              2   2.4412     0.0539          2.3356      2.5468 *
     ---
     Signif. codes: `*' confidence band does not cover 0
 
