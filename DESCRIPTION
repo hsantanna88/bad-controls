@@ -21,15 +21,9 @@ Depends:
     R (>= 4.1.0)
 Imports:
     ptetools (>= 1.0.1),
-    dplyr,
-    tidyr,
     stats
 Suggests:
-    DRDID,
-    BMisc (>= 1.4.7),
     grf (>= 2.0.0),
-    fixest,
-    ggplot2,
     testthat (>= 3.0.0),
     knitr,
     rmarkdown

@@ -3,15 +3,6 @@
 export(didbc)
 export(dr_ml_attgt)
 export(simulate_bad_controls)
-importFrom(dplyr,
-  arrange,
-  filter,
-  group_by,
-  left_join,
-  mutate,
-  select,
-  ungroup
-)
 importFrom(stats,
   as.formula,
   coef,
@@ -24,4 +15,3 @@ importFrom(stats,
   rnorm,
   sd
 )
-importFrom(tidyr,pivot_wider)
