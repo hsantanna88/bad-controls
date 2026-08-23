@@ -76,24 +76,24 @@ dr_ml_attgt(
 - bad_control_binary:
 
   Logical; whether the bad control is binary (detected automatically by
-  [`didbc()`](https://github.com/hugosantanna/badcontrols/reference/didbc.md)).
+  [`didbc()`](https://hsantanna.org/badcontrols/reference/didbc.md)).
   Unused by `dr_ml_attgt()` itself (the bad control never appears as a
   modeled response here), but passed through to
-  [`imputation_attgt()`](https://github.com/hugosantanna/badcontrols/reference/imputation_attgt.md)
+  [`imputation_attgt()`](https://hsantanna.org/badcontrols/reference/imputation_attgt.md)
   in case of a fallback on overlap; see Details.
 
 - overlap_threshold:
 
   If any unit's fitted propensity (from a preliminary, non-cross-fit
   fit) exceeds this value, estimation falls back to
-  [`imputation_attgt()`](https://github.com/hugosantanna/badcontrols/reference/imputation_attgt.md)
+  [`imputation_attgt()`](https://hsantanna.org/badcontrols/reference/imputation_attgt.md)
   for that (g,t) cell. Default 0.99.
 
 - min_group_size:
 
   If a (g,t) cell has fewer treated units than the number of p_2
   covariates plus `min_group_size`, estimation falls back to
-  [`imputation_attgt()`](https://github.com/hugosantanna/badcontrols/reference/imputation_attgt.md)
+  [`imputation_attgt()`](https://hsantanna.org/badcontrols/reference/imputation_attgt.md)
   for that cell (a separate trigger from `overlap_threshold`; see
   Details). Default 5, matching `did`'s own convention for an analogous
   check.
@@ -187,11 +187,11 @@ then reduces exactly to the classical Sant'Anna and Zhao (2020) AIPW-DiD
 estimator.
 
 There are two triggers that fall back to
-[`imputation_attgt()`](https://github.com/hugosantanna/badcontrols/reference/imputation_attgt.md)
+[`imputation_attgt()`](https://hsantanna.org/badcontrols/reference/imputation_attgt.md)
 for a whole (g,t) cell, rather than dropping p_2/omega_0 alone – doing
 that would leave a moment that is not Neyman orthogonal, which is
 exactly why
-[`imputation_attgt()`](https://github.com/hugosantanna/badcontrols/reference/imputation_attgt.md)
+[`imputation_attgt()`](https://hsantanna.org/badcontrols/reference/imputation_attgt.md)
 needs its own first-stage correction terms that this function's
 nuisances don't have:
 
@@ -211,8 +211,10 @@ nuisances don't have:
 
 ## References
 
-Caetano, C., Callaway, B., Payne, S., and Sant'Anna, H. (2024).
-"Difference-in-Differences with Bad Controls."
+Caetano, C., Callaway, B., Payne, S., and Sant'Anna, H. (2026).
+"Difference-in-Differences with Bad Controls." arXiv preprint
+arXiv:2608.03881.
+[doi:10.48550/arXiv.2608.03881](https://doi.org/10.48550/arXiv.2608.03881)
 
 Sant'Anna, P.H.C. and Zhao, J. (2020). "Doubly Robust
 Difference-in-Differences Estimators." *Journal of Econometrics*.
@@ -220,3 +222,24 @@ Difference-in-Differences Estimators." *Journal of Econometrics*.
 Wager, S. and Athey, S. (2018). "Estimation and Inference of
 Heterogeneous Treatment Effects using Random Forests." *Journal of the
 American Statistical Association*.
+
+## Examples
+
+``` r
+if (FALSE) { # \dontrun{
+# dr_ml_attgt() is normally called internally as didbc()'s attgt_fun
+# (via ptetools::pte()), not invoked directly. This is the standard way
+# to reach it end-to-end; slow due to cross-fitted random forests plus
+# the multiplier bootstrap, hence \dontrun.
+sim <- simulate_bad_controls(n = 500)
+res <- didbc(
+  yname = "Y", gname = "G", tname = "period", idname = "id",
+  data = sim$data,
+  bad_control_formula = ~X,
+  xformula = ~Z,
+  est_method = "dr_ml",
+  nuisance_method = "parametric"
+)
+summary(res)
+} # }
+```

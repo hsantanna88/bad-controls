@@ -56,8 +56,8 @@ imputation_attgt(
 - bad_control_binary:
 
   Logical; whether the bad control is binary (detected automatically by
-  [`didbc()`](https://github.com/hugosantanna/badcontrols/reference/didbc.md)).
-  If `TRUE`, Step 1 (the bad-control evolution model) is fit by logistic
+  [`didbc()`](https://hsantanna.org/badcontrols/reference/didbc.md)). If
+  `TRUE`, Step 1 (the bad-control evolution model) is fit by logistic
   regression instead of OLS, and the influence function is adjusted
   accordingly. The continuous case (`FALSE`, the default) is unaffected.
   Ignored when `bad_control_identification_strategy = "did"` (see
@@ -82,7 +82,7 @@ imputation_attgt(
 This function only handles the shared leadin (pivoting `gt_data` to one
 row per unit, and constructing the covariate columns/names), then
 dispatches to
-[`imputation_unconfoundedness`](https://github.com/hugosantanna/badcontrols/reference/imputation_unconfoundedness.md)
+[`imputation_unconfoundedness`](https://hsantanna.org/badcontrols/reference/imputation_unconfoundedness.md)
 or
-[`imputation_did`](https://github.com/hugosantanna/badcontrols/reference/imputation_did.md)
+[`imputation_did`](https://hsantanna.org/badcontrols/reference/imputation_did.md)
 depending on `bad_control_identification_strategy`.

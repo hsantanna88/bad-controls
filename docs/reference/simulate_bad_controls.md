@@ -2,7 +2,7 @@
 
 Generates a staggered difference-in-differences panel dataset matching
 the Monte Carlo designs in Caetano, Callaway, Payne, and Sant'Anna
-(2024), where a time-varying covariate X is affected by treatment (a bad
+(2026), where a time-varying covariate X is affected by treatment (a bad
 control). Returns the known group-time, event-study, and overall ATT
 alongside the data for testing estimators against.
 
@@ -124,24 +124,25 @@ order.
   that dropping the bad control entirely stays nearly unbiased there
   specifically.
 
-- dgp2: \\0.7 X\_{i,t-1}(0) + 0.3Z_i + 0.2W_i + 0.03 W_i^2 + 0.15\\.
-  This package's own "nonlinear W" design – not (yet) a literal replica
-  of the paper's own DGP2. The paper's original coefficients
-  (\\0.15W_i^2\\ added to dgp1's equation) put the quadratic term's
-  vertex at \\W = -0.667\\, well inside \\W\\'s support (\\SD(W) \approx
-  0.88\\), making the map from \\W\\ to \\X\_{it}(0)\\ two-to-one for
-  nearly the whole population – a pathological non-monotonicity, not
-  just "nonlinearity," that specifically breaks
-  [`dr_ml_attgt()`](https://github.com/hugosantanna/badcontrols/reference/dr_ml_attgt.md)'s
+- dgp2: \\0.7 X\_{i,t-1}(0) + 0.3Z_i + 0.2W_i + 0.03 W_i^2 + 0.15\\. The
+  "nonlinear W" design, matching the paper's own DGP2 exactly. An
+  earlier version of the paper's DGP2 used a larger quadratic
+  coefficient (\\0.15W_i^2\\ added to dgp1's equation), which put the
+  quadratic term's vertex at \\W = -0.667\\, well inside \\W\\'s support
+  (\\SD(W) \approx 0.88\\), making the map from \\W\\ to \\X\_{it}(0)\\
+  two-to-one for nearly the whole population – a pathological
+  non-monotonicity, not just "nonlinearity," that specifically broke
+  [`dr_ml_attgt()`](https://hsantanna.org/badcontrols/reference/dr_ml_attgt.md)'s
   \\\omega_0\\ (which conditions on \\(X\_{it}, X\_{i,t-1}, Z)\\, not
   \\W\\, and so must implicitly marginalize over a non-invertible
-  \\W\\). This dgp2 keeps the same linear coefficient on \\W\\ as dgp1
-  (0.2, so it still reads as "dgp1 plus one added wrinkle"), but with a
-  small enough quadratic coefficient (0.03) that the vertex sits at \\W
-  = -3.33\\ (about 3.8 SDs out) – safely beyond what any realistic
-  sample reaches, while still contributing a real, detectable
-  nonlinearity (about 13\\ linear term's own size at 1 SD of \\W\\,
-  versus the paper's 66\\
+  \\W\\). This package's dgp2 keeps the same linear coefficient on \\W\\
+  as dgp1 (0.2, so it still reads as "dgp1 plus one added wrinkle"), but
+  with a small enough quadratic coefficient (0.03) that the vertex sits
+  at \\W = -3.33\\ (about 3.8 SDs out) – safely beyond what any
+  realistic sample reaches, while still contributing a real, detectable
+  nonlinearity (about 13\\ \\W\\). The paper's own DGP2 was subsequently
+  redesigned to use this same \\0.03W_i^2\\ coefficient, so the two now
+  match exactly.
 
 - dgp3: \\0.7 X\_{i,t-1}(0) + 0.3Z_i + 0.4 X\_{i,t-1}(0) Z_i + 0.2
   X\_{i,t-1}(0)^2 + 0.15\\ (no W). Matches the paper's actual Monte
@@ -162,17 +163,17 @@ order.
   X\_{i,t-1}(0) W_i + 0.15\\. dgp2's equation plus an \\X\_{t-1} \times
   W\\ interaction. Unlike a curved-but-additive term, an interaction is
   something a linear model (as in
-  [`imputation_attgt()`](https://github.com/hugosantanna/badcontrols/reference/imputation_attgt.md)'s
+  [`imputation_attgt()`](https://hsantanna.org/badcontrols/reference/imputation_attgt.md)'s
   Step 1) cannot represent at all, no matter how strong – a categorical,
   not just approximate, misspecification. Meant to show a bigger
   separation between Imputation and
-  [`dr_ml_attgt()`](https://github.com/hugosantanna/badcontrols/reference/dr_ml_attgt.md)
+  [`dr_ml_attgt()`](https://hsantanna.org/badcontrols/reference/dr_ml_attgt.md)
   than dgp2 does, since forests capture interactions natively without
   needing to be told where to look. The interaction coefficient (0.05)
   was chosen empirically: it's the smallest of several tried that still
   gives Imputation clearly larger (roughly double or more) bias than
   dgp2 does, while keeping
-  [`dr_ml_attgt()`](https://github.com/hugosantanna/badcontrols/reference/dr_ml_attgt.md)'s
+  [`dr_ml_attgt()`](https://hsantanna.org/badcontrols/reference/dr_ml_attgt.md)'s
   own analytical-SE calibration reasonable (larger coefficients tried,
   e.g. 0.10, gave a starker bias gap but degraded
   `nuisance_method = "ml"`'s SE calibration, apparently worsening rather

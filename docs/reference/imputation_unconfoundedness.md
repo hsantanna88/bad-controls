@@ -4,7 +4,7 @@ Implements the two-step imputation estimator and its influence function
 (`eq:psi-ra-final` in the supplementary appendix) under Covariate
 Unconfoundedness: the bad control's untreated potential evolution is
 modeled from `(bc_pre, W, Z)` among the comparison group. Called by
-[`imputation_attgt`](https://github.com/hugosantanna/badcontrols/reference/imputation_attgt.md)
+[`imputation_attgt`](https://hsantanna.org/badcontrols/reference/imputation_attgt.md)
 when `bad_control_identification_strategy = "unconfoundedness"`.
 
 ## Usage
@@ -31,13 +31,13 @@ imputation_unconfoundedness(
 - wide_data:
 
   one row per unit, as constructed by
-  [`imputation_attgt`](https://github.com/hugosantanna/badcontrols/reference/imputation_attgt.md)
+  [`imputation_attgt`](https://hsantanna.org/badcontrols/reference/imputation_attgt.md)
 
 - pre_data, post_data:
 
   the pre/post-period long-format subsets of the original `gt_data`, as
   constructed by
-  [`imputation_attgt`](https://github.com/hugosantanna/badcontrols/reference/imputation_attgt.md)
+  [`imputation_attgt`](https://hsantanna.org/badcontrols/reference/imputation_attgt.md)
 
 - D:
 
@@ -69,4 +69,4 @@ imputation_unconfoundedness(
 - bad_control_binary:
 
   Logical; whether the bad control is binary (see
-  [`imputation_attgt`](https://github.com/hugosantanna/badcontrols/reference/imputation_attgt.md))
+  [`imputation_attgt`](https://hsantanna.org/badcontrols/reference/imputation_attgt.md))

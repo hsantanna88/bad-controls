@@ -13,7 +13,7 @@ estimation methods."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">badcontrols</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.2</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -30,7 +30,7 @@ estimation methods."></head><body>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json"></form></li>
-<li class="nav-item"><a class="nav-link" href="https://github.com/hugosantanna/badcontrols/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
+<li class="nav-item"><a class="external-link nav-link" href="https://github.com/hugosantanna/badcontrols/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
       </ul></div>
 
 
@@ -40,7 +40,7 @@ estimation methods."></head><body>
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Estimate ATT(g,t) with Bad Controls</h1>
-      <small class="dont-index">Source: <a href="https://github.com/hugosantanna/badcontrols/blob/HEAD/R/didbc.R"><code>R/didbc.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/hugosantanna/badcontrols/blob/HEAD/R/didbc.R" class="external-link"><code>R/didbc.R</code></a></small>
       <div class="d-none name"><code>didbc.Rd</code></div>
     </div>
 
@@ -271,12 +271,19 @@ on the machine.</p></dd>
 <dt>att_gt</dt>
 <dd><p>Group-time specific ATT estimates</p></dd>
 
+<dt>event_study</dt>
+<dd><p>Dynamic (event-time) ATT estimates and SEs</p></dd>
+
+<dt>ptep</dt>
+<dd><p>Internal <code>ptetools</code> parameters object, used by
+<code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code>/<code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code>/<code>autoplot()</code> methods</p></dd>
+
 
 </dl></div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>This function implements the methods from Caetano, Callaway, Payne, and
-Sant'Anna (2024). Two estimation approaches are available:</p>
+Sant'Anna (2026). Two estimation approaches are available:</p>
 <p><strong>Imputation</strong> (<code>est_method = "imputation"</code>):</p><ol><li><p>Among controls, learn X_t ~ f(X(t-1), W, Z)</p></li>
 <li><p>For treated, predict counterfactual X_t(0)</p></li>
 <li><p>Run DiD using imputed X_t(0) instead of observed X_t</p></li>
@@ -288,8 +295,9 @@ regression or the propensity score is correctly specified.</p>
     </div>
     <div class="section level2">
     <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a></h2>
-    <p>Caetano, C., Callaway, B., Payne, S., and Sant'Anna, H. (2024).
-"Difference-in-Differences with Bad Controls."</p>
+    <p>Caetano, C., Callaway, B., Payne, S., and Sant'Anna, H. (2026).
+"Difference-in-Differences with Bad Controls." arXiv preprint
+arXiv:2608.03881. <a href="https://doi.org/10.48550/arXiv.2608.03881" class="external-link">doi:10.48550/arXiv.2608.03881</a></p>
     </div>
 
     <div class="section level2">

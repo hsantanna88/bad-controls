@@ -3,6 +3,6 @@
 ### All vignettes
 
 - [Mini Application on Job
-  Displacement](https://github.com/hugosantanna/badcontrols/articles/bad-controls-coding.md):
+  Displacement](https://hsantanna.org/badcontrols/articles/bad-controls-coding.md):
 - [Difference-in-Differences with Bad Controls: A Conceptual
-  Guide](https://github.com/hugosantanna/badcontrols/articles/bad-controls-conceptual.md):
+  Guide](https://hsantanna.org/badcontrols/articles/bad-controls-conceptual.md):

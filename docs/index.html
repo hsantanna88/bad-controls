@@ -11,8 +11,8 @@
 <script src="deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="Difference-in-Differences with Bad Controls">
-<meta name="description" content="Implements methods for difference-in-differences when time-varying covariates are affected by treatment (bad controls). Provides imputation-based and doubly robust machine learning estimators that correctly handle post-treatment covariates. Builds on the panel treatment effects infrastructure in ptetools. Based on Caetano, Callaway, Payne, and Sant'Anna (2024) &quot;Difference-in-Differences with Bad Controls&quot;.">
-<meta property="og:description" content="Implements methods for difference-in-differences when time-varying covariates are affected by treatment (bad controls). Provides imputation-based and doubly robust machine learning estimators that correctly handle post-treatment covariates. Builds on the panel treatment effects infrastructure in ptetools. Based on Caetano, Callaway, Payne, and Sant'Anna (2024) &quot;Difference-in-Differences with Bad Controls&quot;.">
+<meta name="description" content="Implements methods for difference-in-differences with bad controls, i.e., time-varying covariates that are affected by the treatment. Provides imputation, doubly robust, and machine learning estimators that are based on Caetano, Callaway, Payne, and Sant'Anna (2026) &lt;doi:10.48550/arXiv.2608.03881&gt;.">
+<meta property="og:description" content="Implements methods for difference-in-differences with bad controls, i.e., time-varying covariates that are affected by the treatment. Provides imputation, doubly robust, and machine learning estimators that are based on Caetano, Callaway, Payne, and Sant'Anna (2026) &lt;doi:10.48550/arXiv.2608.03881&gt;.">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -22,7 +22,7 @@
 
     <a class="navbar-brand me-2" href="index.html">badcontrols</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.2</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -45,7 +45,7 @@
 <li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="search.json">
 </form></li>
-<li class="nav-item"><a class="nav-link" href="https://github.com/hugosantanna/badcontrols/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
+<li class="nav-item"><a class="external-link nav-link" href="https://github.com/hugosantanna/badcontrols/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
       </ul>
 </div>
 
@@ -78,8 +78,8 @@
 </h2>
 <ul>
 <li><p>Paper: Caetano et al. (2026).</p></li>
-<li><p><a href="vignettes/bad-controls-conceptual.html">Conceptual vignette</a></p></li>
-<li><p><a href="vignettes/bad-controls-coding.html">Application/Coding vignette</a></p></li>
+<li><p><a href="https://hsantanna.org/badcontrols/articles/bad-controls-conceptual.html">Conceptual vignette</a></p></li>
+<li><p><a href="https://hsantanna.org/badcontrols/articles/bad-controls-coding.html">Application/Coding vignette</a></p></li>
 </ul>
 </div>
 <div class="section level2">
@@ -95,7 +95,7 @@
 </h2>
 <p>The package includes a simulation with a treatment-affected covariate <code>X</code> and exogenous covariate <code>Z</code>. The demo here is based on the covariate unconfoundedness assumption (New Approach 2 above), where we assume that unconfoundedness holds for the bad control after conditioning on the exogenous covariate <code>Z</code>, the pre-treatment value of the bad control, and the lagged outcome. The data that we generate below is a panel with 2000 units and 4 periods.</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/hugosantanna/badcontrols">badcontrols</a></span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/hugosantanna/badcontrols" class="external-link">badcontrols</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">sim</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/simulate_bad_controls.html">simulate_bad_controls</a></span><span class="op">(</span>n <span class="op">=</span> <span class="fl">2000</span>, T_max <span class="op">=</span> <span class="fl">4</span><span class="op">)</span></span>
 <span></span>
@@ -125,16 +125,16 @@
 <span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">res</span><span class="op">)</span></span></code></pre></div>
 <div class="sourceCode" id="cb5"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a>Overall ATT<span class="sc">:</span>  </span>
 <span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a>    ATT    Std. Error     [ <span class="dv">95</span>%  Conf. Int.]  </span>
-<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a> <span class="fl">1.4559</span>        <span class="fl">0.0303</span>     <span class="fl">1.3965</span>      <span class="fl">1.5153</span> <span class="sc">*</span></span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a> <span class="fl">1.4559</span>        <span class="fl">0.0304</span>     <span class="fl">1.3964</span>      <span class="fl">1.5154</span> <span class="sc">*</span></span>
 <span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a></span>
 <span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a></span>
 <span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a>Dynamic Effects<span class="sc">:</span></span>
-<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a> Event Time Estimate Std. Error [<span class="dv">95</span>% Simult.  Conf. Band]  </span>
-<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a>         <span class="sc">-</span><span class="dv">2</span>  <span class="sc">-</span><span class="fl">0.0323</span>     <span class="fl">0.0405</span>       <span class="sc">-</span><span class="fl">0.1400</span>      <span class="fl">0.0754</span>  </span>
-<span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a>         <span class="sc">-</span><span class="dv">1</span>   <span class="fl">0.0780</span>     <span class="fl">0.0446</span>       <span class="sc">-</span><span class="fl">0.0408</span>      <span class="fl">0.1968</span>  </span>
-<span id="cb5-10"><a href="#cb5-10" tabindex="-1"></a>          <span class="dv">0</span>   <span class="fl">1.0931</span>     <span class="fl">0.0282</span>        <span class="fl">1.0179</span>      <span class="fl">1.1683</span> <span class="sc">*</span></span>
-<span id="cb5-11"><a href="#cb5-11" tabindex="-1"></a>          <span class="dv">1</span>   <span class="fl">1.7832</span>     <span class="fl">0.0337</span>        <span class="fl">1.6935</span>      <span class="fl">1.8729</span> <span class="sc">*</span></span>
-<span id="cb5-12"><a href="#cb5-12" tabindex="-1"></a>          <span class="dv">2</span>   <span class="fl">2.4412</span>     <span class="fl">0.0553</span>        <span class="fl">2.2940</span>      <span class="fl">2.5884</span> <span class="sc">*</span></span>
+<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a> Event Time Estimate Std. Error [<span class="dv">95</span>% Pointwise  Conf. Band]  </span>
+<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a>         <span class="sc">-</span><span class="dv">2</span>  <span class="sc">-</span><span class="fl">0.0323</span>     <span class="fl">0.0369</span>         <span class="sc">-</span><span class="fl">0.1047</span>      <span class="fl">0.0401</span>  </span>
+<span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a>         <span class="sc">-</span><span class="dv">1</span>   <span class="fl">0.0780</span>     <span class="fl">0.0315</span>          <span class="fl">0.0163</span>      <span class="fl">0.1397</span> <span class="sc">*</span></span>
+<span id="cb5-10"><a href="#cb5-10" tabindex="-1"></a>          <span class="dv">0</span>   <span class="fl">1.0931</span>     <span class="fl">0.0239</span>          <span class="fl">1.0462</span>      <span class="fl">1.1400</span> <span class="sc">*</span></span>
+<span id="cb5-11"><a href="#cb5-11" tabindex="-1"></a>          <span class="dv">1</span>   <span class="fl">1.7832</span>     <span class="fl">0.0368</span>          <span class="fl">1.7111</span>      <span class="fl">1.8553</span> <span class="sc">*</span></span>
+<span id="cb5-12"><a href="#cb5-12" tabindex="-1"></a>          <span class="dv">2</span>   <span class="fl">2.4412</span>     <span class="fl">0.0539</span>          <span class="fl">2.3356</span>      <span class="fl">2.5468</span> <span class="sc">*</span></span>
 <span id="cb5-13"><a href="#cb5-13" tabindex="-1"></a><span class="sc">---</span></span>
 <span id="cb5-14"><a href="#cb5-14" tabindex="-1"></a>Signif. codes<span class="sc">:</span> <span class="st">`</span><span class="at">*' confidence band does not cover 0</span></span></code></pre></div>
 <p>The same interface can be used with <code>est_method = "imputation"</code> or with <code>nuisance_method = "ml"</code> for cross-fitted machine-learning nuisance estimates.</p>
@@ -176,8 +176,8 @@ Callaway, Brantly, and Pedro HC Sant’Anna. 2021. “Difference-in-Differences 
   </main><aside class="col-md-3"><div class="links">
 <h2 data-toc-skip>Links</h2>
 <ul class="list-unstyled">
-<li><a href="https://github.com/hugosantanna/badcontrols/">Browse source code</a></li>
-<li><a href="https://github.com/hugosantanna/badcontrols/issues">Report a bug</a></li>
+<li><a href="https://github.com/hugosantanna/badcontrols/" class="external-link">Browse source code</a></li>
+<li><a href="https://github.com/hugosantanna/badcontrols/issues" class="external-link">Report a bug</a></li>
 </ul>
 </div>
 
@@ -210,7 +210,7 @@ Callaway, Brantly, and Pedro HC Sant’Anna. 2021. “Difference-in-Differences 
 <div class="dev-status">
 <h2 data-toc-skip>Dev status</h2>
 <ul class="list-unstyled">
-<li><a href="https://github.com/hugosantanna/badcontrols"><img src="https://img.shields.io/badge/version-0.1.2-blue.svg" alt="Version"></a></li>
+<li><a href="https://github.com/hugosantanna/badcontrols" class="external-link"><img src="https://img.shields.io/badge/version-1.0.0-blue.svg" alt="Version"></a></li>
 <li><a href="https://cran.r-project.org/" class="external-link"><img src="https://img.shields.io/badge/R-%3E%3D%204.1-blue.svg" alt="R"></a></li>
 <li><a href="https://www.gnu.org/licenses/gpl-3.0" class="external-link"><img src="https://img.shields.io/badge/License-GPL%20v3-green.svg" alt="License: GPL v3"></a></li>
 </ul>

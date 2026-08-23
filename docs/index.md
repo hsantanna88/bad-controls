@@ -30,8 +30,8 @@ untreated potential version of the bad control:
 
 For both approaches, `badcontrols` provides imputation, parametric
 doubly robust, and machine-learning estimators. The main function is
-[`didbc()`](https://github.com/hugosantanna/badcontrols/reference/didbc.md),
-which follows a syntax similar to
+[`didbc()`](https://hsantanna.org/badcontrols/reference/didbc.md), which
+follows a syntax similar to
 [`did::att_gt()`](https://bcallaway11.github.io/did/reference/att_gt.html)
 and
 [`ptetools::pte_default()`](https://rdrr.io/pkg/ptetools/man/pte_default.html).
@@ -41,10 +41,10 @@ and
 - Paper: Caetano et al. (2026).
 
 - [Conceptual
-  vignette](https://github.com/hugosantanna/badcontrols/vignettes/bad-controls-conceptual.md)
+  vignette](https://hsantanna.org/badcontrols/articles/bad-controls-conceptual.html)
 
 - [Application/Coding
-  vignette](https://github.com/hugosantanna/badcontrols/vignettes/bad-controls-coding.md)
+  vignette](https://hsantanna.org/badcontrols/articles/bad-controls-coding.html)
 
 ## Installation
 
@@ -104,16 +104,16 @@ summary(res)
 ``` R
 Overall ATT:  
     ATT    Std. Error     [ 95%  Conf. Int.]  
- 1.4559        0.0303     1.3965      1.5153 *
+ 1.4559        0.0304     1.3964      1.5154 *
 
 
 Dynamic Effects:
- Event Time Estimate Std. Error [95% Simult.  Conf. Band]  
-         -2  -0.0323     0.0405       -0.1400      0.0754  
-         -1   0.0780     0.0446       -0.0408      0.1968  
-          0   1.0931     0.0282        1.0179      1.1683 *
-          1   1.7832     0.0337        1.6935      1.8729 *
-          2   2.4412     0.0553        2.2940      2.5884 *
+ Event Time Estimate Std. Error [95% Pointwise  Conf. Band]  
+         -2  -0.0323     0.0369         -0.1047      0.0401  
+         -1   0.0780     0.0315          0.0163      0.1397 *
+          0   1.0931     0.0239          1.0462      1.1400 *
+          1   1.7832     0.0368          1.7111      1.8553 *
+          2   2.4412     0.0539          2.3356      2.5468 *
 ---
 Signif. codes: `*' confidence band does not cover 0
 ```

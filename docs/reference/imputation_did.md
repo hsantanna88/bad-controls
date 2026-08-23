@@ -9,9 +9,9 @@ Unconfoundedness: `ass:bad-control-parallel-trends` and
 influence function derivation. Step 1 regresses the bad control's own
 change, rather than its post-period level, on `(W, Z)` among the
 comparison group; Step 2 (the outcome regression) is unchanged from
-[`imputation_unconfoundedness`](https://github.com/hugosantanna/badcontrols/reference/imputation_unconfoundedness.md).
+[`imputation_unconfoundedness`](https://hsantanna.org/badcontrols/reference/imputation_unconfoundedness.md).
 Called by
-[`imputation_attgt`](https://github.com/hugosantanna/badcontrols/reference/imputation_attgt.md)
+[`imputation_attgt`](https://hsantanna.org/badcontrols/reference/imputation_attgt.md)
 when `bad_control_identification_strategy = "did"`.
 
 ## Usage
@@ -37,13 +37,13 @@ imputation_did(
 - wide_data:
 
   one row per unit, as constructed by
-  [`imputation_attgt`](https://github.com/hugosantanna/badcontrols/reference/imputation_attgt.md)
+  [`imputation_attgt`](https://hsantanna.org/badcontrols/reference/imputation_attgt.md)
 
 - pre_data, post_data:
 
   the pre/post-period long-format subsets of the original `gt_data`, as
   constructed by
-  [`imputation_attgt`](https://github.com/hugosantanna/badcontrols/reference/imputation_attgt.md)
+  [`imputation_attgt`](https://hsantanna.org/badcontrols/reference/imputation_attgt.md)
 
 - D:
 

@@ -47,8 +47,8 @@ table(nlsy_job_displacement$group[!duplicated(nlsy_job_displacement$id)])
 Before treating `occ_score` as a bad control, it’s worth checking
 directly whether displacement actually affects it. We can do this with
 the same group-time ATT machinery that
-[`didbc()`](https://github.com/hugosantanna/badcontrols/reference/didbc.md)
-builds on
+[`didbc()`](https://hsantanna.org/badcontrols/reference/didbc.md) builds
+on
 ([`ptetools::pte_default()`](https://rdrr.io/pkg/ptetools/man/pte_default.html)),
 just using `occ_score` as the outcome instead of earnings.
 
@@ -72,21 +72,21 @@ summary(occ_score_check)
 #> 
 #> Overall ATT:  
 #>     ATT    Std. Error     [ 95%  Conf. Int.]  
-#>  -0.033        0.0113    -0.0553     -0.0108 *
+#>  -0.033        0.0093    -0.0512     -0.0148 *
 #> 
 #> 
 #> Dynamic Effects:
-#>  Event Time Estimate Std. Error [95% Simult.  Conf. Band]  
-#>         -10  -0.0210     0.0228       -0.0791      0.0371  
-#>          -8  -0.0218     0.0178       -0.0671      0.0235  
-#>          -6   0.0015     0.0143       -0.0351      0.0380  
-#>          -4  -0.0266     0.0125       -0.0584      0.0052  
-#>          -2   0.0000         NA            NA          NA  
-#>           0  -0.0398     0.0095       -0.0639     -0.0158 *
-#>           2  -0.0290     0.0114       -0.0582      0.0002  
-#>           4  -0.0070     0.0146       -0.0441      0.0301  
-#>           6  -0.0198     0.0167       -0.0623      0.0228  
-#>           8  -0.0138     0.0175       -0.0584      0.0308  
+#>  Event Time Estimate Std. Error [95% Pointwise  Conf. Band]  
+#>         -10  -0.0210     0.0218         -0.0638      0.0218  
+#>          -8  -0.0218     0.0169         -0.0549      0.0114  
+#>          -6   0.0015     0.0146         -0.0272      0.0301  
+#>          -4  -0.0266     0.0127         -0.0514     -0.0018 *
+#>          -2   0.0000         NA              NA          NA  
+#>           0  -0.0398     0.0109         -0.0612     -0.0185 *
+#>           2  -0.0290     0.0119         -0.0523     -0.0057 *
+#>           4  -0.0070     0.0147         -0.0358      0.0218  
+#>           6  -0.0198     0.0167         -0.0525      0.0129  
+#>           8  -0.0138     0.0201         -0.0533      0.0257  
 #> ---
 #> Signif. codes: `*' confidence band does not cover 0
 ```
@@ -96,8 +96,8 @@ score, especially in the period right after job displacement occurs.
 
 ## Estimating the effect of displacement on earnings
 
-[`didbc()`](https://github.com/hugosantanna/badcontrols/reference/didbc.md)’s
-main arguments mirror
+[`didbc()`](https://hsantanna.org/badcontrols/reference/didbc.md)’s main
+arguments mirror
 [`did::att_gt()`](https://bcallaway11.github.io/did/reference/att_gt.html)/[`ptetools::pte_default()`](https://rdrr.io/pkg/ptetools/man/pte_default.html),
 plus a few bad-control-specific ones: `bad_control_formula` (the bad
 control itself, `occ_score`), `bad_control_cov_formula` (the
@@ -129,26 +129,26 @@ summary(res_imputation)
 #> 
 #> Overall ATT:  
 #>      ATT    Std. Error     [ 95%  Conf. Int.]  
-#>  -0.0672        0.0188    -0.1042     -0.0303 *
+#>  -0.0672        0.0242    -0.1146     -0.0199 *
 #> 
 #> 
 #> Dynamic Effects:
-#>  Event Time Estimate Std. Error [95% Simult.  Conf. Band]  
-#>         -10  -0.0335     0.0517       -0.1832      0.1162  
-#>          -8   0.0028     0.0409       -0.1156      0.1211  
-#>          -6   0.0028     0.0241       -0.0671      0.0727  
-#>          -4  -0.0161     0.0237       -0.0846      0.0525  
-#>          -2   0.0000         NA            NA          NA  
-#>           0  -0.0995     0.0254       -0.1730     -0.0261 *
-#>           2  -0.1251     0.0375       -0.2336     -0.0166 *
-#>           4  -0.0518     0.0369       -0.1588      0.0552  
-#>           6   0.0364     0.0405       -0.0809      0.1537  
-#>           8   0.0472     0.0793       -0.1824      0.2768  
+#>  Event Time Estimate Std. Error [95% Pointwise  Conf. Band]  
+#>         -10  -0.0335     0.0561         -0.1434      0.0764  
+#>          -8   0.0028     0.0360         -0.0679      0.0734  
+#>          -6   0.0028     0.0256         -0.0474      0.0530  
+#>          -4  -0.0161     0.0247         -0.0645      0.0323  
+#>          -2   0.0000         NA              NA          NA  
+#>           0  -0.0995     0.0262         -0.1509     -0.0482 *
+#>           2  -0.1251     0.0373         -0.1982     -0.0521 *
+#>           4  -0.0518     0.0374         -0.1251      0.0214  
+#>           6   0.0364     0.0470         -0.0556      0.1285  
+#>           8   0.0472     0.0762         -0.1022      0.1966  
 #> ---
 #> Signif. codes: `*' confidence band does not cover 0
 ```
 
-[`didbc()`](https://github.com/hugosantanna/badcontrols/reference/didbc.md)
+[`didbc()`](https://hsantanna.org/badcontrols/reference/didbc.md)
 returns event studies alongside the overall ATT, which are plotted
 below.
 
@@ -156,7 +156,9 @@ below.
 plot(res_imputation)
 ```
 
-![](bad-controls-coding_files/figure-html/plot-event-study-1.png)
+![](precompiled-figures/bad-controls-coding-plot-event-study-1.png)
+
+plot of chunk plot-event-study
 
 ### Other estimators
 
@@ -200,8 +202,8 @@ didbc(
 ```
 
 Finally, instead of covariate unconfoundedness,
-[`didbc()`](https://github.com/hugosantanna/badcontrols/reference/didbc.md)
-also supports assuming *parallel trends for the bad control itself*
+[`didbc()`](https://hsantanna.org/badcontrols/reference/didbc.md) also
+supports assuming *parallel trends for the bad control itself*
 (`bad_control_identification_strategy = "did"`). Since this approach
 requires an additional linearity condition, it is only available for
 `est_method = "imputation"`, and still uses `bad_control_cov_formula`

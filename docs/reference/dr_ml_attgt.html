@@ -15,7 +15,7 @@ presence of post-treatment covariates (bad controls)."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">badcontrols</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.2</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -32,7 +32,7 @@ presence of post-treatment covariates (bad controls)."></head><body>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json"></form></li>
-<li class="nav-item"><a class="nav-link" href="https://github.com/hugosantanna/badcontrols/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
+<li class="nav-item"><a class="external-link nav-link" href="https://github.com/hugosantanna/badcontrols/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
       </ul></div>
 
 
@@ -42,7 +42,7 @@ presence of post-treatment covariates (bad controls)."></head><body>
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Doubly Robust Estimator for Bad Controls</h1>
-      <small class="dont-index">Source: <a href="https://github.com/hugosantanna/badcontrols/blob/HEAD/R/dr_ml.R"><code>R/dr_ml.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/hugosantanna/badcontrols/blob/HEAD/R/dr_ml.R" class="external-link"><code>R/dr_ml.R</code></a></small>
       <div class="d-none name"><code>dr_ml_attgt.Rd</code></div>
     </div>
 
@@ -245,8 +245,9 @@ and offending unit IDs.</p></li>
 </ol></div>
     <div class="section level2">
     <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a></h2>
-    <p>Caetano, C., Callaway, B., Payne, S., and Sant'Anna, H. (2024).
-"Difference-in-Differences with Bad Controls."</p>
+    <p>Caetano, C., Callaway, B., Payne, S., and Sant'Anna, H. (2026).
+"Difference-in-Differences with Bad Controls." arXiv preprint
+arXiv:2608.03881. <a href="https://doi.org/10.48550/arXiv.2608.03881" class="external-link">doi:10.48550/arXiv.2608.03881</a></p>
 <p>Sant'Anna, P.H.C. and Zhao, J. (2020). "Doubly Robust
 Difference-in-Differences Estimators." <em>Journal of Econometrics</em>.</p>
 <p>Wager, S. and Athey, S. (2018). "Estimation and Inference of
@@ -254,6 +255,27 @@ Heterogeneous Treatment Effects using Random Forests." <em>Journal
 of the American Statistical Association</em>.</p>
     </div>
 
+    <div class="section level2">
+    <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># \dontrun{</span></span></span>
+<span class="r-in"><span><span class="co"># dr_ml_attgt() is normally called internally as didbc()'s attgt_fun</span></span></span>
+<span class="r-in"><span><span class="co"># (via ptetools::pte()), not invoked directly. This is the standard way</span></span></span>
+<span class="r-in"><span><span class="co"># to reach it end-to-end; slow due to cross-fitted random forests plus</span></span></span>
+<span class="r-in"><span><span class="co"># the multiplier bootstrap, hence \dontrun.</span></span></span>
+<span class="r-in"><span><span class="va">sim</span> <span class="op">&lt;-</span> <span class="fu"><a href="simulate_bad_controls.html">simulate_bad_controls</a></span><span class="op">(</span>n <span class="op">=</span> <span class="fl">500</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">res</span> <span class="op">&lt;-</span> <span class="fu"><a href="didbc.html">didbc</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>  yname <span class="op">=</span> <span class="st">"Y"</span>, gname <span class="op">=</span> <span class="st">"G"</span>, tname <span class="op">=</span> <span class="st">"period"</span>, idname <span class="op">=</span> <span class="st">"id"</span>,</span></span>
+<span class="r-in"><span>  data <span class="op">=</span> <span class="va">sim</span><span class="op">$</span><span class="va">data</span>,</span></span>
+<span class="r-in"><span>  bad_control_formula <span class="op">=</span> <span class="op">~</span><span class="va">X</span>,</span></span>
+<span class="r-in"><span>  xformula <span class="op">=</span> <span class="op">~</span><span class="va">Z</span>,</span></span>
+<span class="r-in"><span>  est_method <span class="op">=</span> <span class="st">"dr_ml"</span>,</span></span>
+<span class="r-in"><span>  nuisance_method <span class="op">=</span> <span class="st">"parametric"</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">res</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
+<span class="r-in"><span></span></span>
+</code></pre></div>
+    </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside></div>
 

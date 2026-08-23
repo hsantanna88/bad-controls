@@ -1,22 +1,13 @@
 # Changelog
 
-## badcontrols 0.1.2
+## badcontrols 1.0.0
 
-- Renamed the bundled application dataset `nlsy_application` to
-  `nlsy_job_displacement`, and its `G_window` column to `group`
-  (breaking change). No other columns changed.
-- Renamed the main estimating function `bc_att_gt()` to
-  [`didbc()`](https://github.com/hugosantanna/badcontrols/reference/didbc.md)
-  (breaking change). No arguments changed.
+- First CRAN release.
 - Added `num_threads` argument to
-  [`didbc()`](https://github.com/hugosantanna/badcontrols/reference/didbc.md)
-  and
-  [`dr_ml_attgt()`](https://github.com/hugosantanna/badcontrols/reference/dr_ml_attgt.md)
-  to control the number of threads `grf` uses for its forests under
-  `nuisance_method = "ml"`. Default `NULL` preserves the existing
-  behavior (`grf`’s own auto-detection); set to `1` to pin a single
-  thread, e.g. for Monte Carlo work run with outer parallelism across
-  replications.
+  [`didbc()`](https://hsantanna.org/badcontrols/reference/didbc.md)/[`dr_ml_attgt()`](https://hsantanna.org/badcontrols/reference/dr_ml_attgt.md)
+  to control `grf`’s thread usage under `nuisance_method = "ml"`.
+- Added conceptual and coding vignettes, the latter using the bundled
+  `nlsy_job_displacement` application data.
 
 ## badcontrols 0.1.1
 

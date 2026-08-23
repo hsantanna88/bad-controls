@@ -219,10 +219,20 @@ A `pte_results` object containing:
 
   Group-time specific ATT estimates
 
+- event_study:
+
+  Dynamic (event-time) ATT estimates and SEs
+
+- ptep:
+
+  Internal `ptetools` parameters object, used by
+  [`summary()`](https://rdrr.io/r/base/summary.html)/[`plot()`](https://rdrr.io/r/graphics/plot.default.html)/`autoplot()`
+  methods
+
 ## Details
 
 This function implements the methods from Caetano, Callaway, Payne, and
-Sant'Anna (2024). Two estimation approaches are available:
+Sant'Anna (2026). Two estimation approaches are available:
 
 **Imputation** (`est_method = "imputation"`):
 
@@ -245,8 +255,10 @@ or the propensity score is correctly specified.
 
 ## References
 
-Caetano, C., Callaway, B., Payne, S., and Sant'Anna, H. (2024).
-"Difference-in-Differences with Bad Controls."
+Caetano, C., Callaway, B., Payne, S., and Sant'Anna, H. (2026).
+"Difference-in-Differences with Bad Controls." arXiv preprint
+arXiv:2608.03881.
+[doi:10.48550/arXiv.2608.03881](https://doi.org/10.48550/arXiv.2608.03881)
 
 ## Examples
 
