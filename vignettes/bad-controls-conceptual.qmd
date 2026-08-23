@@ -2,10 +2,6 @@
 title: "Difference-in-Differences with Bad Controls: A Conceptual Guide"
 format: html
 bibliography: references.bib
-header-includes:
-  - \newcommand{\E}{\mathbb{E}}
-  - \newcommand{\ATT}{\text{ATT}}
-  - \newcommand{\independent}{\mathrel{\perp\!\!\!\perp}}
 vignette: >
   %\VignetteIndexEntry{Difference-in-Differences with Bad Controls: A Conceptual Guide}
   %\VignetteEngine{quarto::html}
@@ -18,6 +14,20 @@ knitr::opts_chunk$set(
   comment = "#>"
 )
 ```
+
+$\newcommand{\E}{\mathbb{E}} \newcommand{\ATT}{\text{ATT}} \newcommand{\independent}{\mathrel{\perp\!\!\!\perp}}$
+
+<!--
+The macro definitions above are deliberately in the document body, not
+YAML header-includes: for format: html, quarto/pandoc inject
+header-includes macros as raw text at the top of <body>, outside the
+content div pkgdown's build_articles() extracts, so they silently vanish
+from the pkgdown-embedded version of this page (MathJax then errors on
+\ATT/\E/\independent as undefined control sequences). Defining them
+inside a real $$...$$ block keeps them part of the extracted content,
+where they render (and are correctly stripped from view) on both a
+standalone quarto render and the pkgdown site.
+-->
 
 `badcontrols` implements difference-in-differences methods for settings in
 which a time-varying covariate is affected by treatment (a "bad control"). This vignette provides an intuitive overview of bad controls based on our paper @caetano-callaway-payne-santanna-2026.

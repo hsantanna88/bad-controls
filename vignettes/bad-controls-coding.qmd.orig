@@ -2,10 +2,6 @@
 title: "Mini Application on Job Displacement"
 format: html
 bibliography: references.bib
-header-includes:
-  - \newcommand{\E}{\mathbb{E}}
-  - \newcommand{\ATT}{\text{ATT}}
-  - \newcommand{\independent}{\mathrel{\perp\!\!\!\perp}}
 vignette: >
   %\VignetteIndexEntry{Difference-in-Differences with Bad Controls: A Coding Example}
   %\VignetteEngine{quarto::html}
