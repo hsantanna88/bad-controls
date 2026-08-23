@@ -429,7 +429,7 @@ dr_ml_attgt <- function(gt_data,
   )
 
   ptetools::attgt_if(attgt = att_dr, inf_func = inf_func,
-                extra_gt_returns = extra_returns)
+                     extra_gt_returns = extra_returns)
 }
 
 # Fit a regression nuisance function (m_0, nu_0, or omega_0): a cross-fitted

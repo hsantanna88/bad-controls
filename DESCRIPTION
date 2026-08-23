@@ -26,7 +26,7 @@ Suggests:
     grf (>= 2.0.0),
     testthat (>= 3.0.0),
     knitr,
-    rmarkdown
-VignetteBuilder: knitr
+    quarto
+VignetteBuilder: quarto
 Config/testthat/edition: 3
 Config/roxygen2/version: 8.1.0

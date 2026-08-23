@@ -67,8 +67,8 @@ nlsy_job_displacement <- nlsy_job_displacement[, c(
 )]
 
 if (nrow(nlsy_job_displacement) != 19386L ||
-    length(unique(nlsy_job_displacement$id)) != 3231L ||
-    length(unique(nlsy_job_displacement$year)) != 6L) {
+      length(unique(nlsy_job_displacement$id)) != 3231L ||
+      length(unique(nlsy_job_displacement$year)) != 6L) {
   stop("The prepared data do not match the paper's reported dimensions.")
 }
 if (anyDuplicated(nlsy_job_displacement[c("id", "year")])) {

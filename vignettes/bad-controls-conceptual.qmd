@@ -8,7 +8,7 @@ header-includes:
   - \newcommand{\independent}{\mathrel{\perp\!\!\!\perp}}
 vignette: >
   %\VignetteIndexEntry{Difference-in-Differences with Bad Controls: A Conceptual Guide}
-  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEngine{quarto::html}
   %\VignetteEncoding{UTF-8}
 ---
 
