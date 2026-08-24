@@ -142,8 +142,21 @@ To cite the paper underlying this package:
       url     = {https://arxiv.org/abs/2608.03881}
     }
 
-To cite the `badcontrols` package itself, run `citation("badcontrols")`
-in R.
+To cite the `badcontrols` package itself:
+
+> Caetano, C., Callaway, B., Payne, S., and Sant’Anna, H. (2026).
+> badcontrols: Difference-in-Differences with Bad Controls. R package
+> version 1.0.0. https://github.com/hugosantanna/badcontrols
+
+    @Manual{caetano2026badcontrolspkg,
+      title  = {{badcontrols}: Difference-in-Differences with Bad Controls},
+      author = {Carolina Caetano and Brantly Callaway and Stroud Payne and Hugo Sant'Anna},
+      year   = {2026},
+      note   = {R package version 1.0.0},
+      url    = {https://github.com/hugosantanna/badcontrols}
+    }
+
+Running `citation("badcontrols")` in R prints both of these.
 
 ## License
 
