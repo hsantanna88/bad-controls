@@ -156,12 +156,12 @@ of \code{beta_drift}). Once treated (period \eqn{t \ge G_i}, event time
 \lambda_e + \delta_e}, where \eqn{\lambda_e = \lambda(1+\kappa e)} and
 \eqn{\delta_e = \delta(1+\kappa e)}. The \eqn{\beta_t \lambda_e} term
 routes the treatment's effect on X through the (time-varying) X-Y
-relationship, giving true \eqn{\ATT(g,t) = \beta_t \lambda_e + \delta_e}.
+relationship, giving true \eqn{\mathrm{ATT}(g,t) = \beta_t \lambda_e + \delta_e}.
 
-The true \eqn{\ATT(g,t)} only ever depends on \eqn{\beta_t} at the
+The true \eqn{\mathrm{ATT}(g,t)} only ever depends on \eqn{\beta_t} at the
 post-treatment period \eqn{t}, which equals 1 whenever \eqn{t=2}
 regardless of \code{beta_drift} -- so with the defaults, \code{T_max = 2,
-groups = 2} already gives true \eqn{\ATT = \delta+\lambda = 1.00}. But
+groups = 2} already gives true \eqn{\mathrm{ATT} = \delta+\lambda = 1.00}. But
 \code{beta_drift != 0} still makes \eqn{\beta_1 \ne \beta_2}, so an
 estimator that assumes a constant X-Y loading across periods (as linear
 Imputation implicitly does) will show bias in that case even though the

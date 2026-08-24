@@ -9,3 +9,5 @@
 ^\.revdeplite$
 ^vignettes/.*\.qmd\.orig$
 ^vignettes/precompile\.R$
+^_pkgdown\.yml$
+^data-raw$
