@@ -1,4 +1,4 @@
-# Difference-in-Differences with Bad Controls: A Conceptual Guide
+# Difference-in-Differences with Bad Controls: A Conceptual Overview
 
 \\\newcommand{\E}{\mathbb{E}} \newcommand{\ATT}{\text{ATT}}
 \newcommand{\independent}{\mathrel{\perp\\\\\\\perp}}\\

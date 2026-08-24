@@ -1,5 +1,5 @@
 ---
-title: "Difference-in-Differences with Bad Controls: A Conceptual Guide"
+title: "Difference-in-Differences with Bad Controls: A Conceptual Overview"
 format: html
 bibliography: references.bib
 vignette: >
