@@ -3,7 +3,7 @@ title: "Difference-in-Differences with Bad Controls: A Conceptual Guide"
 format: html
 bibliography: references.bib
 vignette: >
-  %\VignetteIndexEntry{Difference-in-Differences with Bad Controls: A Conceptual Guide}
+  %\VignetteIndexEntry{Difference-in-Differences with Bad Controls: A Conceptual Overview}
   %\VignetteEngine{quarto::html}
   %\VignetteEncoding{UTF-8}
 ---
@@ -32,7 +32,7 @@ standalone quarto render and the pkgdown site.
 `badcontrols` implements difference-in-differences methods for settings in
 which a time-varying covariate is affected by treatment (a "bad control"). This vignette provides an intuitive overview of bad controls based on our paper @caetano-callaway-payne-santanna-2026.
 
-## The bad-control tension
+## Motivation
 
 Difference-in-differences is often more credible after conditioning on
 covariates, but it is common in empirical applications to have variables that we would like to (in some sense) control for that themselves may be affected by the treatment.  In the application in our paper, we study the effects of job displacement on a person's earnings.  In this context, it seems reasonable to want to compare people that work in similar occupations, but job displacement can itself change a person's occupation.  In this case, occupation is a "bad control" because (1) it is affected by the treatment but also (2) seems to be an important covariate.
@@ -48,11 +48,11 @@ where $\theta_t$ and $\eta_i$ are time and unit fixed effects, $D_{it}$ is the t
 - **Option 1: Include the bad control:** Including the bad control results in conditioning on a post-treatment variable.  Comparisons are then made among treated and
   untreated units with the same observed post-treatment covariate, which is not the right comparison when the covariate is affected by the treatment.
 
-This option is not very popular in empirical work in economics---to our knowledge, the only times empirical researchers ever purposefully include a bad control as a regressor are in supplementary robustness checks.  It has been widely criticized, probably most notably in *Mostly Harmless Econometrics* [@angrist-pischke-2008].
+  This option is not very popular in empirical work in economics---to our knowledge, the only times empirical researchers ever purposefully include a bad control as a regressor are in supplementary robustness checks.  It has been widely criticized, probably most notably in *Mostly Harmless Econometrics* [@angrist-pischke-2008].
 
 - **Option 2: Drop the bad control:** In other words, run the regression above dropping the $\beta X_{it}$ term.  This approach avoids conditioning on a post-treatment variable, but it drops the covariate entirely.  In our application, this would mean that we would not even attempt to compare individuals in the same occupations at all.
 
-In contrast to Option 1, Option 2 is very popular in empirical work.  To us, it seems like this has its own issues, that could be just as bad as including the bad control.  To drop the bad control entirely effectively says that the bad control was never needed as a covariate at all.  Or, in words, the leading solution the bad control problem is to pretend that the covariate was never needed in the first place.
+  In contrast to Option 1, Option 2 is very popular in empirical work.  To us, it seems like this has its own issues, that could be just as bad as including the bad control.  To drop the bad control entirely effectively says that the bad control was never needed as a covariate at all.  Or, in other words, the leading solution the bad control problem is to pretend that the covariate was never needed in the first place.
 
 ## Alternative approaches
 

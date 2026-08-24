@@ -9,7 +9,7 @@ control”). This vignette provides an intuitive overview of bad controls
 based on our paper Caetano et al.
 ([2026](#ref-caetano-callaway-payne-santanna-2026)).
 
-## The bad-control tension
+## Motivation
 
 Difference-in-differences is often more credible after conditioning on
 covariates, but it is common in empirical applications to have variables
@@ -37,12 +37,12 @@ the regression or not (both of which have problems):
   post-treatment covariate, which is not the right comparison when the
   covariate is affected by the treatment.
 
-This option is not very popular in empirical work in economics—to our
-knowledge, the only times empirical researchers ever purposefully
-include a bad control as a regressor are in supplementary robustness
-checks. It has been widely criticized, probably most notably in *Mostly
-Harmless Econometrics* ([Angrist and Pischke
-2008](#ref-angrist-pischke-2008)).
+  This option is not very popular in empirical work in economics—to our
+  knowledge, the only times empirical researchers ever purposefully
+  include a bad control as a regressor are in supplementary robustness
+  checks. It has been widely criticized, probably most notably in
+  *Mostly Harmless Econometrics* ([Angrist and Pischke
+  2008](#ref-angrist-pischke-2008)).
 
 - **Option 2: Drop the bad control:** In other words, run the regression
   above dropping the \\\beta X\_{it}\\ term. This approach avoids
@@ -50,12 +50,13 @@ Harmless Econometrics* ([Angrist and Pischke
   entirely. In our application, this would mean that we would not even
   attempt to compare individuals in the same occupations at all.
 
-In contrast to Option 1, Option 2 is very popular in empirical work. To
-us, it seems like this has its own issues, that could be just as bad as
-including the bad control. To drop the bad control entirely effectively
-says that the bad control was never needed as a covariate at all. Or, in
-words, the leading solution the bad control problem is to pretend that
-the covariate was never needed in the first place.
+  In contrast to Option 1, Option 2 is very popular in empirical work.
+  To us, it seems like this has its own issues, that could be just as
+  bad as including the bad control. To drop the bad control entirely
+  effectively says that the bad control was never needed as a covariate
+  at all. Or, in other words, the leading solution the bad control
+  problem is to pretend that the covariate was never needed in the first
+  place.
 
 ## Alternative approaches
 
