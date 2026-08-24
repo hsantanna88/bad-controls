@@ -156,8 +156,6 @@ To cite the `badcontrols` package itself:
       url    = {https://github.com/hugosantanna/badcontrols}
     }
 
-Running `citation("badcontrols")` in R prints both of these.
-
 ## License
 
 GPL (\>= 3)

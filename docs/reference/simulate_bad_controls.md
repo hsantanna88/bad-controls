@@ -192,17 +192,18 @@ time \\e = t - G_i\\), the observed covariate and outcome are \\X\_{it}
 \lambda_e + \delta_e\\, where \\\lambda_e = \lambda(1+\kappa e)\\ and
 \\\delta_e = \delta(1+\kappa e)\\. The \\\beta_t \lambda_e\\ term routes
 the treatment's effect on X through the (time-varying) X-Y relationship,
-giving true \\\ATT(g,t) = \beta_t \lambda_e + \delta_e\\.
+giving true \\\mathrm{ATT}(g,t) = \beta_t \lambda_e + \delta_e\\.
 
-The true \\\ATT(g,t)\\ only ever depends on \\\beta_t\\ at the
+The true \\\mathrm{ATT}(g,t)\\ only ever depends on \\\beta_t\\ at the
 post-treatment period \\t\\, which equals 1 whenever \\t=2\\ regardless
 of `beta_drift` – so with the defaults, `T_max = 2, groups = 2` already
-gives true \\\ATT = \delta+\lambda = 1.00\\. But `beta_drift != 0` still
-makes \\\beta_1 \ne \beta_2\\, so an estimator that assumes a constant
-X-Y loading across periods (as linear Imputation implicitly does) will
-show bias in that case even though the true ATT value matches the paper.
-To reproduce the paper's two-period designs exactly, including the
-constant-loading assumption, set `beta_drift = 0` as well.
+gives true \\\mathrm{ATT} = \delta+\lambda = 1.00\\. But
+`beta_drift != 0` still makes \\\beta_1 \ne \beta_2\\, so an estimator
+that assumes a constant X-Y loading across periods (as linear Imputation
+implicitly does) will show bias in that case even though the true ATT
+value matches the paper. To reproduce the paper's two-period designs
+exactly, including the constant-loading assumption, set `beta_drift = 0`
+as well.
 
 When `binary_bad_control = TRUE`, the same equations for X_i1 and
 X_it(0) (dropping their additive noise term) are used as a logit index
