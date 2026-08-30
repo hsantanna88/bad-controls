@@ -69,12 +69,12 @@ occ_score_check <- pte_default(
   tname = "year",
   idname = "id",
   data = nlsy_job_displacement,
-  xformula = ~ race + female + educ_max_grade,
+  xformula = ~ race + female + educ_max_grade + log_earnings,
   d_outcome = FALSE,
   lagged_outcome_cov = TRUE,
   est_method = "reg",
   control_group = "notyettreated",
-  base_period = "universal",
+  base_period = "varying",
   bstrap = FALSE
 )
 
@@ -109,7 +109,7 @@ res_imputation <- didbc(
   xformula = ~ race + female + educ_max_grade,
   est_method = "imputation",
   control_group = "notyettreated",
-  base_period = "universal",
+  base_period = "varying",
   bstrap = FALSE
 )
 
@@ -148,7 +148,7 @@ didbc(
   est_method = "dr_ml",
   nuisance_method = "parametric",
   control_group = "notyettreated",
-  base_period = "universal",
+  base_period = "varying",
   bstrap = FALSE
 )
 
@@ -165,7 +165,7 @@ didbc(
   est_method = "dr_ml",
   nuisance_method = "ml",
   control_group = "notyettreated",
-  base_period = "universal",
+  base_period = "varying",
   bstrap = FALSE
 )
 ```
@@ -191,7 +191,7 @@ didbc(
   est_method = "imputation",
   bad_control_identification_strategy = "did",
   control_group = "notyettreated",
-  base_period = "universal",
+  base_period = "varying",
   bstrap = FALSE
 )
 ```
