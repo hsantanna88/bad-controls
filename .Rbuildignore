@@ -11,3 +11,5 @@
 ^vignettes/precompile\.R$
 ^_pkgdown\.yml$
 ^data-raw$
+^vignettes/\.quarto$
+^vignettes/.*_files$
