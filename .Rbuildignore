@@ -13,3 +13,4 @@
 ^data-raw$
 ^vignettes/\.quarto$
 ^vignettes/.*_files$
+^cran-comments\.md$
